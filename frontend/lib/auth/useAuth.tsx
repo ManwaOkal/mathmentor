@@ -240,10 +240,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: role,
             name: name || email.split('@')[0],
           },
+          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined,
         },
       })
 
       if (error) {
+        console.error('Signup error:', error)
         return { error }
       }
 
@@ -251,14 +253,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.user) {
         try {
           await createUserProfile(data.user.id, email, role, name)
-        } catch (profileError) {
+          console.log('User profile created successfully')
+        } catch (profileError: any) {
           console.error('Error creating user profile:', profileError)
-          // Don't fail signup if profile creation fails - it can be created later
+          // If profile creation fails, still return success since auth user was created
+          // The profile can be created later when user logs in
+          if (profileError?.code === '23505') {
+            // User already exists - this is okay
+            console.log('User profile already exists')
+          } else {
+            // Log the error but don't fail signup
+            console.warn('Profile creation failed (non-critical):', profileError?.message || profileError)
+          }
         }
       }
 
       return { error: null }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Unexpected signup error:', error)
       return { error: error as AuthError }
     }
   }
