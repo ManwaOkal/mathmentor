@@ -80,10 +80,28 @@ class ApiClient {
       return this.pendingRequests.get(cacheKey) as Promise<T>
     }
 
-    const headers: Record<string, string> = {
+    // Convert headers to plain object if needed
+    let headersObj: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
     }
+    
+    // Handle different header types
+    if (options.headers) {
+      if (options.headers instanceof Headers) {
+        options.headers.forEach((value, key) => {
+          headersObj[key] = value
+        })
+      } else if (Array.isArray(options.headers)) {
+        options.headers.forEach(([key, value]) => {
+          headersObj[key] = value
+        })
+      } else {
+        // It's already a Record<string, string>
+        headersObj = { ...headersObj, ...options.headers as Record<string, string> }
+      }
+    }
+    
+    const headers = headersObj
 
     // Add auth header with Supabase session token
     console.log('Getting auth token for request to:', endpoint)
