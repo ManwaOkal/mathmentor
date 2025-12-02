@@ -32,12 +32,8 @@ export default function ActivityList({ classroomId, onSelectActivity }: Activity
         return
       }
       const result = await api.getClassroomActivities(classroomId, sessionToken)
-      if (result && result.activities) {
-        setActivities(result.activities)
-      } else if (Array.isArray(result)) {
-        // Handle case where API returns array directly
-        setActivities(result)
-      }
+      // API always returns an array, but handle edge cases
+      setActivities(Array.isArray(result) ? result : [])
     } catch (error) {
       console.error('Error loading activities:', error)
     } finally {
