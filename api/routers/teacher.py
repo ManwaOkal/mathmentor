@@ -977,31 +977,52 @@ async def get_classroom_activities(
         if not classroom_result.data:
             raise HTTPException(status_code=404, detail="Classroom not found")
         
-        # Get activities - both document-based and prompt-based
-        # For document-based: get through documents
-        docs_result = supabase.table('teacher_documents').select('document_id').eq('classroom_id', classroom_id).execute()
-        document_ids = [doc['document_id'] for doc in (docs_result.data or [])]
-        
-        # Get activities for these documents
         activities = []
-        if document_ids:
-            doc_activities_result = supabase.table('learning_activities').select('*').in_('document_id', document_ids).execute()
-            if doc_activities_result.data:
-                activities.extend(doc_activities_result.data)
         
-        # Also get prompt-based activities (no document_id) for this teacher
-        prompt_activities_result = supabase.table('learning_activities').select('*').eq('teacher_id', user['id']).is_('document_id', 'null').execute()
-        if prompt_activities_result.data:
-            activities.extend(prompt_activities_result.data)
+        # Get document-based activities: get through documents
+        try:
+            docs_result = supabase.table('teacher_documents').select('document_id').eq('classroom_id', classroom_id).execute()
+            document_ids = [doc['document_id'] for doc in (docs_result.data or [])]
+            
+            if document_ids:
+                doc_activities_result = supabase.table('learning_activities').select('*').in_('document_id', document_ids).execute()
+                if doc_activities_result.data:
+                    activities.extend(doc_activities_result.data)
+        except Exception as e:
+            print(f"Error fetching document-based activities: {e}")
+            # Continue with prompt-based activities
+        
+        # Get prompt-based activities (activities with classroom_id or no document_id)
+        try:
+            # First try to get activities with classroom_id column (if migration 006 was applied)
+            try:
+                prompt_activities_result = supabase.table('learning_activities').select('*').eq('teacher_id', user['id']).eq('classroom_id', classroom_id).execute()
+                if prompt_activities_result.data:
+                    # Filter out activities that already have document_id (to avoid duplicates)
+                    prompt_activities = [a for a in prompt_activities_result.data if not a.get('document_id')]
+                    activities.extend(prompt_activities)
+            except Exception:
+                # If classroom_id column doesn't exist, fall back to null document_id check
+                # Use a different approach: get all teacher activities and filter
+                all_activities_result = supabase.table('learning_activities').select('*').eq('teacher_id', user['id']).execute()
+                if all_activities_result.data:
+                    # Filter for activities without document_id
+                    prompt_activities = [a for a in all_activities_result.data if not a.get('document_id')]
+                    activities.extend(prompt_activities)
+        except Exception as e:
+            print(f"Error fetching prompt-based activities: {e}")
+            # Continue with what we have
         
         # Sort by created_at descending
         activities.sort(key=lambda x: x.get('created_at', ''), reverse=True)
         
-        return {"activities": activities}
+        return activities  # Return array directly, not wrapped in object
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        error_detail = f"{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+        raise HTTPException(status_code=500, detail=error_detail)
 
 class AssignActivityRequest(BaseModel):
     activity_id: str
