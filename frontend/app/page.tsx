@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Auth from '@/components/Auth'
 import Navbar from '@/components/Navbar'
@@ -24,7 +24,7 @@ import {
 import { useAuth } from '../lib/auth/useAuth'
 import { UserRole } from '../lib/auth/types'
 
-export default function Home() {
+function HomeContent() {
   const { user, profile, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -548,5 +548,20 @@ export default function Home() {
       </footer>
 
     </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <div className="mt-3 text-slate-600">Loading...</div>
+        </div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   )
 }

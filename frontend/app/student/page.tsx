@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import StudentActivity from '@/components/student/StudentActivity'
 import JoinClassroom from '@/components/student/JoinClassroom'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -24,7 +24,7 @@ import {
   CheckCircle
 } from 'lucide-react'
 
-export default function StudentPage() {
+function StudentPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user, profile, signOut, session, loading: authLoading } = useAuth()
@@ -584,6 +584,21 @@ export default function StudentPage() {
         </main>
       </div>
     </div>
+  )
+}
+
+export default function StudentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <div className="mt-3 text-slate-600">Loading...</div>
+        </div>
+      </div>
+    }>
+      <StudentPageContent />
+    </Suspense>
   )
 }
 
