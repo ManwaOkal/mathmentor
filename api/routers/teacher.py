@@ -972,10 +972,17 @@ async def get_classroom_activities(
         supabase = get_supabase_client()
         
         # Verify classroom belongs to teacher
-        classroom_result = supabase.table('classrooms').select('*').eq('classroom_id', classroom_id).eq('teacher_id', user['id']).single().execute()
-        
-        if not classroom_result.data:
-            raise HTTPException(status_code=404, detail="Classroom not found")
+        try:
+            classroom_result = supabase.table('classrooms').select('*').eq('classroom_id', classroom_id).eq('teacher_id', user['id']).single().execute()
+            
+            if not classroom_result.data:
+                raise HTTPException(status_code=404, detail="Classroom not found")
+        except Exception as e:
+            error_str = str(e)
+            if 'PGRST116' in error_str or '0 rows' in error_str:
+                raise HTTPException(status_code=404, detail="Classroom not found")
+            # Re-raise other errors
+            raise
         
         activities = []
         
@@ -990,6 +997,8 @@ async def get_classroom_activities(
                     activities.extend(doc_activities_result.data)
         except Exception as e:
             print(f"Error fetching document-based activities: {e}")
+            import traceback
+            print(traceback.format_exc())
             # Continue with prompt-based activities
         
         # Get prompt-based activities (activities with classroom_id or no document_id)
@@ -1001,20 +1010,41 @@ async def get_classroom_activities(
                     # Filter out activities that already have document_id (to avoid duplicates)
                     prompt_activities = [a for a in prompt_activities_result.data if not a.get('document_id')]
                     activities.extend(prompt_activities)
-            except Exception:
+            except Exception as inner_e:
+                error_str = str(inner_e)
                 # If classroom_id column doesn't exist, fall back to null document_id check
-                # Use a different approach: get all teacher activities and filter
-                all_activities_result = supabase.table('learning_activities').select('*').eq('teacher_id', user['id']).execute()
-                if all_activities_result.data:
-                    # Filter for activities without document_id
-                    prompt_activities = [a for a in all_activities_result.data if not a.get('document_id')]
-                    activities.extend(prompt_activities)
+                if 'column' in error_str.lower() and 'does not exist' in error_str.lower():
+                    # Column doesn't exist, use fallback approach
+                    all_activities_result = supabase.table('learning_activities').select('*').eq('teacher_id', user['id']).execute()
+                    if all_activities_result.data:
+                        # Filter for activities without document_id
+                        prompt_activities = [a for a in all_activities_result.data if not a.get('document_id')]
+                        activities.extend(prompt_activities)
+                else:
+                    # Different error, log and continue
+                    print(f"Error querying classroom_id column: {inner_e}")
+                    import traceback
+                    print(traceback.format_exc())
+                    # Try fallback anyway
+                    try:
+                        all_activities_result = supabase.table('learning_activities').select('*').eq('teacher_id', user['id']).execute()
+                        if all_activities_result.data:
+                            prompt_activities = [a for a in all_activities_result.data if not a.get('document_id')]
+                            activities.extend(prompt_activities)
+                    except:
+                        pass
         except Exception as e:
             print(f"Error fetching prompt-based activities: {e}")
+            import traceback
+            print(traceback.format_exc())
             # Continue with what we have
         
         # Sort by created_at descending
-        activities.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        try:
+            activities.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        except Exception as e:
+            print(f"Error sorting activities: {e}")
+            # Return unsorted if sorting fails
         
         return activities  # Return array directly, not wrapped in object
     except HTTPException:
@@ -1022,6 +1052,7 @@ async def get_classroom_activities(
     except Exception as e:
         import traceback
         error_detail = f"{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+        print(f"Fatal error in get_classroom_activities: {error_detail}")
         raise HTTPException(status_code=500, detail=error_detail)
 
 class AssignActivityRequest(BaseModel):
