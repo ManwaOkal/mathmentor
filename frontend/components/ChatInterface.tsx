@@ -72,8 +72,7 @@ const MessageItem = React.memo(({ message, index, totalMessages }: { message: Me
       <div className={`max-w-[85%] sm:max-w-[75%] rounded-lg p-3 sm:p-4 ${bgClass}`}>
         {isVisible ? (
           <MarkdownRenderer 
-            content={message.content} 
-            isUserMessage={isUser}
+            content={message.content}
           />
         ) : (
           <div className="prose prose-sm max-w-none">
