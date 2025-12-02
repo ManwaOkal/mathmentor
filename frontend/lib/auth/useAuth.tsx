@@ -198,8 +198,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               session.user.email!,
               role,
               session.user.user_metadata?.name
-            ).catch((error) => {
-              console.error('Error creating profile (non-blocking):', error)
+            ).catch((error: any) => {
+              // Handle RLS errors gracefully - profile will be created on next login
+              if (error?.code === '42501') {
+                console.log('Profile creation blocked by RLS (will retry on next auth check)')
+              } else {
+                console.error('Error creating profile (non-blocking):', error)
+              }
               // Profile already set from metadata, so this is fine
             })
           }
@@ -250,17 +255,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // If user was created, create profile in public.users table
+      // Wait a moment for the session to be established so RLS policies work
       if (data.user) {
         try {
+          // Wait for session to be established (auth state change will trigger)
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          // Try to create profile - if it fails, it will be created on first login
           await createUserProfile(data.user.id, email, role, name)
           console.log('User profile created successfully')
         } catch (profileError: any) {
           console.error('Error creating user profile:', profileError)
           // If profile creation fails, still return success since auth user was created
-          // The profile can be created later when user logs in
+          // The profile can be created later when user logs in or via trigger
           if (profileError?.code === '23505') {
             // User already exists - this is okay
             console.log('User profile already exists')
+          } else if (profileError?.code === '42501') {
+            // RLS policy violation - this is okay, profile will be created on login
+            console.log('Profile creation blocked by RLS (will be created on login)')
           } else {
             // Log the error but don't fail signup
             console.warn('Profile creation failed (non-critical):', profileError?.message || profileError)
