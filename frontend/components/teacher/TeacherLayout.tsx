@@ -30,7 +30,7 @@ interface TeacherLayoutProps {
 }
 
 export default function TeacherLayout({ children }: TeacherLayoutProps) {
-  const { user, session } = useAuth()
+  const { user, profile, session } = useAuth()
   const [activeClassroom, setActiveClassroom] = useState<Classroom | null>(null)
   const [activeSection, setActiveSection] = useState<'activities' | 'analytics' | 'finetuning' | null>(null)
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
@@ -261,8 +261,19 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
           activeSection={activeSection}
         />
 
+        {/* Greeting Banner - Lighter and less prominent */}
+        {profile && (
+          <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-2">
+            <div className="max-w-full mx-auto">
+              <p className="text-sm text-slate-600 font-light">
+                Welcome, {profile.name || profile.email}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-slate-50/30 p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-8">
           <TeacherLayoutContext.Provider value={{ activeClassroom, activeSection, refreshClassrooms: loadClassrooms }}>
             {activeClassroom && activeSection ? (
               children

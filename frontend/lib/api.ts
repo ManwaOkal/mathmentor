@@ -457,8 +457,27 @@ class ApiClient {
     return this.request<{ documents: any[] }>(`/api/teacher/documents/${classroomId}`, {}, !skipCache)
   }
 
-  async getClassroomAnalytics(classroomId: string, timeRange: string = 'week'): Promise<any> {
-    return this.request(`/api/teacher/analytics/${classroomId}?time_range=${timeRange}`, {}, true, 60 * 1000)
+  async getClassroomAnalytics(classroomId: string, timeRange: string = 'week', sessionToken?: string): Promise<any> {
+    const token = sessionToken || await this.getAuthToken()
+    if (!token) {
+      throw new Error('No authentication token available. Please log in again.')
+    }
+    
+    const url = `${this.baseUrl}/api/teacher/analytics/${classroomId}?time_range=${timeRange}`
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }))
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
   }
 
   async processDocumentIntelligently(documentId: string): Promise<any> {
@@ -1153,7 +1172,9 @@ class ApiClient {
   async completeConversationalActivity(
     studentActivityId: string,
     conversationHistory: Array<{ role: string; content: string }>,
-    sessionToken?: string
+    sessionToken?: string,
+    score?: number,
+    feedback?: string
   ): Promise<any> {
     const token = sessionToken || await this.getAuthToken()
     if (!token) {
@@ -1168,7 +1189,9 @@ class ApiClient {
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
-        conversation_history: conversationHistory
+        conversation_history: conversationHistory,
+        score: score,
+        feedback: feedback
       })
     })
 

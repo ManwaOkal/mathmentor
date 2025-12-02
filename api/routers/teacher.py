@@ -35,7 +35,6 @@ class ClassroomResponse(BaseModel):
     description: Optional[str]
     join_code: str
     created_at: str
-    updated_at: Optional[str] = None
 
 class UploadDocumentRequest(BaseModel):
     classroom_id: str
@@ -90,48 +89,16 @@ class CreateConversationalActivityRequest(BaseModel):
     estimated_time_minutes: int = 15
     classroom_id: Optional[str] = None
 
-# Helper function to get current teacher
+# Helper function to get current teacher (simplified - in production, verify JWT)
 async def get_current_teacher(authorization: Optional[str] = Header(None)):
-    """Get current teacher user from Supabase JWT token."""
+    """Get current teacher user. In production, extract from JWT token."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Authentication required")
     
-    token = authorization.replace("Bearer ", "").strip()
-    
-    # Check if token is empty
-    if not token:
-        raise HTTPException(status_code=401, detail="Authentication token is empty")
-    
-    # Try to verify Supabase JWT token
-    from lib.jwt_verify import verify_supabase_token
-    print(f"Teacher Auth: Verifying token (length: {len(token)}, preview: {token[:50]}...)")
-    user_info = verify_supabase_token(token)
-    
-    if user_info and user_info.get("id"):
-        user_id = user_info["id"]
-        user_metadata = user_info.get("user_metadata", {})
-        
-        # Check if user is a teacher
-        role = user_metadata.get("role", "student")
-        print(f"Teacher Auth: User {user_id} has role {role}")
-        
-        if role.lower() not in ["teacher", "admin"]:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Access denied. User role is '{role}', but 'teacher' or 'admin' is required."
-            )
-        
-        print(f"Teacher Auth: Authentication successful for user {user_id}")
-        return {"id": user_id, "role": role.lower(), "email": user_info.get("email")}
-    
-    # Fallback: if token verification fails, check if it's a UUID (backward compatibility)
-    import re
-    uuid_pattern = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
-    if uuid_pattern.match(token):
-        # Legacy support: assume UUID means teacher for now
-        return {"id": token, "role": "teacher"}
-    
-    raise HTTPException(status_code=401, detail="Invalid or expired authentication token. Please log in again.")
+    user_id = authorization.replace("Bearer ", "")
+    # In production, verify JWT and get user metadata
+    # For now, assume user_id is provided and check role
+    return {"id": user_id, "role": "teacher"}
 
 @router.post("/classrooms", response_model=ClassroomResponse)
 async def create_classroom(
@@ -201,8 +168,7 @@ async def create_classroom(
             name=classroom.get('name', request.name),
             description=classroom.get('description', request.description),
             join_code=classroom.get('join_code', classroom_data.get('join_code', '')),
-            created_at=str(classroom.get('created_at', '')),
-            updated_at=str(classroom.get('updated_at', classroom.get('created_at', '')))
+            created_at=str(classroom.get('created_at', ''))
         )
     except HTTPException:
         raise
@@ -243,8 +209,7 @@ async def get_teacher_classrooms(user: dict = Depends(get_current_teacher)):
                 name=c['name'],
                 description=c.get('description'),
                 join_code=c['join_code'],
-                created_at=str(c.get('created_at', '')),
-                updated_at=str(c.get('updated_at', c.get('created_at', '')))
+                created_at=c.get('created_at', '')
             )
             for c in result.data
         ]
@@ -1751,24 +1716,14 @@ async def create_teaching_example(
             if result.data:
                 return {"id": example_id, "message": "Example created successfully"}
         except Exception as db_error:
-            error_str = str(db_error).lower()
             # If table doesn't exist, create it in memory for now
-            if 'relation' in error_str and 'does not exist' in error_str:
+            # In production, run migration to create the table
+            if 'relation' in str(db_error).lower() and 'does not exist' in str(db_error).lower():
                 # Store in memory as fallback
                 if not hasattr(router, '_teaching_examples_memory'):
                     router._teaching_examples_memory = []
                 router._teaching_examples_memory.append(example_data)
                 return {"id": example_id, "message": "Example created successfully (stored in memory)"}
-            # If column doesn't exist, remove it and try again
-            elif 'assessment_criteria' in error_str and ('column' in error_str or 'pgrst204' in error_str):
-                # Remove assessment_criteria from data and try again
-                example_data_without_criteria = {k: v for k, v in example_data.items() if k != 'assessment_criteria'}
-                try:
-                    result = supabase.table('teaching_examples').insert(example_data_without_criteria).execute()
-                    if result.data:
-                        return {"id": example_id, "message": "Example created successfully (assessment_criteria column not available)"}
-                except Exception as retry_error:
-                    raise db_error  # Raise original error if retry also fails
             raise
         
         raise HTTPException(status_code=500, detail="Failed to create example")
@@ -1811,17 +1766,6 @@ async def update_teaching_example(
             if result.data:
                 return {"message": "Example updated successfully"}
         except Exception as db_error:
-            error_str = str(db_error).lower()
-            # If column doesn't exist, remove it and try again
-            if 'assessment_criteria' in error_str and ('column' in error_str or 'pgrst204' in error_str):
-                # Remove assessment_criteria from update data and try again
-                update_data_without_criteria = {k: v for k, v in update_data.items() if k != 'assessment_criteria'}
-                try:
-                    result = supabase.table('teaching_examples').update(update_data_without_criteria).eq('id', example_id).eq('teacher_id', user['id']).execute()
-                    if result.data:
-                        return {"message": "Example updated successfully (assessment_criteria column not available)"}
-                except Exception as retry_error:
-                    raise db_error  # Raise original error if retry also fails
             # Check if it's in memory store
             if hasattr(router, '_teaching_examples_memory'):
                 for i, ex in enumerate(router._teaching_examples_memory):

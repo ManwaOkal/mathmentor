@@ -64,6 +64,8 @@ class SaveConversationRequest(BaseModel):
 
 class CompleteConversationalActivityRequest(BaseModel):
     conversation_history: List[Dict[str, str]]  # Final conversation history
+    score: Optional[float] = None  # Understanding score
+    feedback: Optional[str] = None  # Assessment feedback
 
 # Helper function to get current student
 async def get_current_student(authorization: Optional[str] = Header(None)):
@@ -177,15 +179,28 @@ async def get_student_classrooms(user: dict = Depends(get_current_student)):
     """Get all classrooms the student is enrolled in."""
     try:
         supabase = get_supabase_client()
+        student_id = user['id']
         
-        result = supabase.table('student_enrollments').select('*, classrooms(*)').eq('student_id', user['id']).execute()
+        print(f"Fetching classrooms for student_id: {student_id}")
+        
+        # Query enrollments with classroom data
+        result = supabase.table('student_enrollments').select('*, classrooms(*)').eq('student_id', student_id).execute()
+        
+        print(f"Query result: {result}")
+        print(f"Result data: {result.data}")
         
         # Return enrollments with classroom data nested
         if result.data:
+            print(f"Found {len(result.data)} enrollments")
             return result.data
+        
+        print("No enrollments found")
         return []
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        error_detail = f"Error fetching student classrooms: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+        print(error_detail)
+        raise HTTPException(status_code=500, detail=error_detail)
 
 @router.get("/activities")
 async def get_student_activities(
@@ -768,16 +783,25 @@ async def complete_conversational_activity(
         if not student_activity_result.data:
             raise HTTPException(status_code=404, detail="Activity not found")
         
-        # Save final conversation and mark as completed
-        supabase.table('student_activities').update({
+        # Prepare update data
+        update_data = {
             'status': 'completed',
-            'completed_at': datetime.now().isoformat(),
+            'completed_at': datetime.now().isoformat(),  # ISO format for Supabase timestamp
             'metadata': {
                 **student_activity_result.data.get('metadata', {}),
                 'conversation_history': request.conversation_history,
                 'completed_at': datetime.now().isoformat()
             }
-        }).eq('student_activity_id', student_activity_id).execute()
+        }
+        
+        # Add score and feedback if provided
+        if request.score is not None:
+            update_data['score'] = request.score
+        if request.feedback:
+            update_data['feedback'] = request.feedback
+        
+        # Save final conversation and mark as completed
+        supabase.table('student_activities').update(update_data).eq('student_activity_id', student_activity_id).execute()
         
         return {"success": True, "message": "Activity completed"}
     except HTTPException:

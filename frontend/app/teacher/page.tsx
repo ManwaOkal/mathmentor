@@ -44,18 +44,18 @@ function TeacherPageContent() {
   // This will be handled by the sidebar selection
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Section Content */}
       {activeSection === 'activities' && (
         <div>
-          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 sm:gap-4 mb-6">
             <div>
-              <h2 className="text-3xl font-light text-slate-900 tracking-tight mb-1">Activities</h2>
-              <p className="text-sm text-slate-500 font-light">Manage and organize your learning activities</p>
+              <h2 className="text-2xl sm:text-3xl font-light text-slate-900 tracking-tight mb-1">Activities</h2>
+              <p className="text-xs sm:text-sm text-slate-500 font-light">Manage and organize your learning activities</p>
             </div>
             <button
               onClick={() => setShowPromptActivityCreation(true)}
-              className="self-start sm:self-auto px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center gap-2 shadow-sm"
+              className="self-start sm:self-auto px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center gap-1.5 sm:gap-2 shadow-sm"
             >
               <span className="text-slate-600">+</span>
               <span>Create Activity</span>

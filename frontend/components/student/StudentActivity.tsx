@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, Loader2, ArrowLeft, Sparkles, Brain, Target, CheckCircle, Clock, MessageSquare, BookOpen } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { Send, Loader2, ArrowLeft, Brain, Clock } from 'lucide-react'
 import { StudentActivity as StudentActivityType } from '@/lib/auth/types'
 import { api } from '@/lib/api'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth/useAuth'
+import Navbar from '../Navbar'
+import Auth from '../Auth'
 
 // Lazy load markdown renderer
 const MarkdownRenderer = dynamic(() => import('../MarkdownRenderer'), {
@@ -51,6 +53,59 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
+  // Memoize session token to avoid repeated retrieval
+  const sessionToken = useMemo(() => session?.access_token || null, [session?.access_token])
+
+  // Helper: Convert messages to conversation history format
+  const getConversationHistory = useCallback((msgs: Message[] = messages) => {
+    return msgs.map(m => ({ role: m.role, content: m.content }))
+  }, [messages])
+
+  // Helper: Check if user messages contain mathematical work
+  const hasMathematicalWork = useCallback((userMessages: string[]) => {
+    const mathKeywords = [
+      'solve', 'answer', 'calculate', 'work', 'step', 'equation', 'problem',
+      'example', 'explain', 'understand', 'think', 'try', 'attempt', 'got',
+      'result', 'answer is', 'equals', 'formula', 'solution', 'method',
+      '=', '+', '-', '*', '/', 'x', 'y', 'variable', 'algebra', 'math'
+    ]
+    
+    return userMessages.some(content => {
+      const lowerContent = content.toLowerCase()
+      const hasNumbers = /\d/.test(content)
+      const hasMathKeywords = mathKeywords.some(keyword => lowerContent.includes(keyword))
+      const hasMathExpressions = /[+\-*/=<>]/.test(content) || /\d+\s*[+\-*/=<>]\s*\d+/.test(content)
+      return hasNumbers || hasMathKeywords || hasMathExpressions
+    })
+  }, [])
+
+  // Helper: Check if messages are just greetings
+  const isJustGreetings = useCallback((userMessages: string[]) => {
+    const greetingWords = ['hello', 'hi', 'hey', 'thanks', 'thank you', 'ok', 'okay', 'yes', 'no', 'sure', 'cool', 'nice']
+    return userMessages.every(content => {
+      const trimmed = content.trim().toLowerCase()
+      return greetingWords.some(word => trimmed.startsWith(word)) && content.length < 50
+    })
+  }, [])
+
+  // Memoized user message stats
+  const userMessageStats = useMemo(() => {
+    const userMessages = messages.filter(m => m.role === 'user')
+    const userMessageContents = userMessages.map(m => m.content.toLowerCase())
+    const hasMath = hasMathematicalWork(userMessageContents)
+    const isGreetings = isJustGreetings(userMessageContents)
+    const totalExchanges = Math.ceil(messages.length / 2)
+    
+    return {
+      count: userMessages.length,
+      contents: userMessageContents,
+      hasMathematicalWork: hasMath,
+      isJustGreetings: isGreetings,
+      totalExchanges,
+      canComplete: userMessages.length >= 2 && (hasMath || userMessages.length >= 3)
+    }
+  }, [messages, hasMathematicalWork, isJustGreetings])
+
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
@@ -58,7 +113,6 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
   const loadActivity = useCallback(async () => {
     setLoading(true)
     try {
-      const sessionToken = session?.access_token || null
       const data = await api.getStudentActivity(activityId, sessionToken || undefined)
       
       if (data && data.activity && data.student_activity) {
@@ -72,6 +126,25 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
         if (data.student_activity.status === 'completed') {
           setCompleted(true)
           setCurrentPhase('complete')
+          // Load conversation history if available
+          if (data.student_activity.metadata?.conversation_history) {
+            const history = data.student_activity.metadata.conversation_history
+            const loadedMessages: Message[] = history.map((msg: any, idx: number) => ({
+              role: msg.role,
+              content: msg.content,
+              timestamp: new Date(),
+              id: `loaded_${idx}`
+            }))
+            setMessages(loadedMessages)
+          }
+          // Load understanding score if available
+          if (data.student_activity.score !== null && data.student_activity.score !== undefined) {
+            setUnderstandingScore(data.student_activity.score)
+          }
+          if (data.student_activity.feedback) {
+            setAssessmentFeedback(data.student_activity.feedback)
+          }
+          return // Don't proceed with normal flow for completed activities
         }
         
         // Get activity introduction and automatically start teaching
@@ -125,7 +198,7 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
     } finally {
       setLoading(false)
     }
-  }, [activityId, session?.access_token])
+  }, [activityId, sessionToken])
 
   const loadActivityRef = useRef<string | null>(null)
   
@@ -164,7 +237,7 @@ I'm your AI math tutor. I'm here to help you master mathematical concepts throug
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || sending || completed || currentPhase === 'complete') return
+    if (!input.trim() || sending || completed || currentPhase === 'complete' || activity?.status === 'completed') return
 
     const trimmedInput = input.trim()
     setInput('')
@@ -179,17 +252,9 @@ I'm your AI math tutor. I'm here to help you master mathematical concepts throug
     setMessages(prev => [...prev, userMessage])
 
     try {
-      const conversationHistory = messages.map(m => ({
-        role: m.role,
-        content: m.content
-      }))
-      conversationHistory.push({
-        role: 'user',
-        content: trimmedInput
-      })
+      const conversationHistory = [...getConversationHistory(), { role: 'user' as const, content: trimmedInput }]
 
       // Get phase-based response
-      const sessionToken = session?.access_token || null
       const phaseResponse = await api.getPhaseResponse(activity!.activity_id, {
         student_input: trimmedInput,
         current_phase: currentPhase,
@@ -211,7 +276,6 @@ I'm your AI math tutor. I'm here to help you master mathematical concepts throug
         // If completing, calculate understanding
         if (phaseResponse.next_phase === 'complete') {
           try {
-            const sessionToken = session?.access_token || null
             const assessment = await api.assessUnderstanding(activity!.activity_id, conversationHistory, sessionToken || undefined)
             setUnderstandingScore(assessment.score)
             setCompleted(true)
@@ -223,7 +287,6 @@ I'm your AI math tutor. I'm here to help you master mathematical concepts throug
       }
 
       try {
-        const sessionToken = session?.access_token || null
         await api.saveConversation(activity!.student_activity_id, conversationHistory, sessionToken || undefined)
       } catch (error) {
         console.error('Error saving conversation:', error)
@@ -243,52 +306,17 @@ I'm your AI math tutor. I'm here to help you master mathematical concepts throug
   }
 
   const completeActivity = async () => {
-    if (!activity || completed || isCompleting || messages.length <= 1) return
+    if (!activity || completed || isCompleting || messages.length <= 1 || activity.status === 'completed') return
 
     setIsCompleting(true)
     try {
-      const conversationHistory = messages.map(m => ({
-        role: m.role,
-        content: m.content
-      }))
+      const conversationHistory = getConversationHistory()
+      const { count: userMessageCount, hasMathematicalWork, isJustGreetings } = userMessageStats
 
       // Only assess if there's meaningful conversation (more than just intro)
-      let assessment = null
-      const userMessages = conversationHistory.filter(m => m.role === 'user').length
-      const userMessageContents = conversationHistory
-        .filter(m => m.role === 'user')
-        .map(m => m.content.toLowerCase())
-      
-      // Check if there's actual mathematical work (not just greetings)
-      const hasMathematicalWork = userMessageContents.some(content => {
-        // Check for numbers (digits)
-        const hasNumbers = /\d/.test(content)
-        
-        // Check for math keywords
-        const mathKeywords = [
-          'solve', 'answer', 'calculate', 'work', 'step', 'equation', 'problem',
-          'example', 'explain', 'understand', 'think', 'try', 'attempt', 'got',
-          'result', 'answer is', 'equals', 'formula', 'solution', 'method',
-          '=', '+', '-', '*', '/', 'x', 'y', 'variable', 'algebra', 'math'
-        ]
-        const hasMathKeywords = mathKeywords.some(keyword => content.includes(keyword))
-        
-        // Check for mathematical expressions
-        const hasMathExpressions = /[+\-*/=<>]/.test(content) || /\d+\s*[+\-*/=<>]\s*\d+/.test(content)
-        
-        return hasNumbers || hasMathKeywords || hasMathExpressions
-      })
-      
-      // Check if it's just greetings/casual conversation
-      const isJustGreetings = userMessageContents.every(content => {
-        const greetingWords = ['hello', 'hi', 'hey', 'thanks', 'thank you', 'ok', 'okay', 'yes', 'no', 'sure', 'cool', 'nice']
-        return greetingWords.some(word => content.trim().toLowerCase().startsWith(word)) && content.length < 50
-      })
-      
-      if (conversationHistory.length > 1 && userMessages > 0) {
+      if (conversationHistory.length > 1 && userMessageCount > 0) {
         try {
-          const sessionToken = session?.access_token || null
-          assessment = await api.assessUnderstanding(activity.activity_id, conversationHistory, sessionToken || undefined)
+          const assessment = await api.assessUnderstanding(activity.activity_id, conversationHistory, sessionToken || undefined)
           
           // Override if AI gave score but there's no actual math work
           if (!hasMathematicalWork || isJustGreetings) {
@@ -301,19 +329,15 @@ I'm your AI math tutor. I'm here to help you master mathematical concepts throug
         } catch (error) {
           console.error('Error assessing understanding:', error)
           // Calculate score based on actual engagement - 0 if no math work
-          let estimatedScore = 0
-          
-          if (isJustGreetings || !hasMathematicalWork) {
-            estimatedScore = 0
-          } else if (hasMathematicalWork) {
-            estimatedScore = Math.min(30 + (userMessages * 10), 70)
-          }
+          const estimatedScore = (isJustGreetings || !hasMathematicalWork) 
+            ? 0 
+            : Math.min(30 + (userMessageCount * 10), 70)
           
           setUnderstandingScore(estimatedScore)
           setAssessmentFeedback(
             estimatedScore === 0
               ? "No mathematical work demonstrated. Complete activities require solving problems or demonstrating understanding through mathematical work."
-              : `You engaged in ${userMessages} exchange${userMessages !== 1 ? 's' : ''} with some mathematical work. More practice needed to demonstrate full understanding.`
+              : `You engaged in ${userMessageCount} exchange${userMessageCount !== 1 ? 's' : ''} with some mathematical work. More practice needed to demonstrate full understanding.`
           )
         }
       } else {
@@ -321,12 +345,29 @@ I'm your AI math tutor. I'm here to help you master mathematical concepts throug
         setAssessmentFeedback("No mathematical work demonstrated. Complete activities require solving problems or demonstrating understanding through mathematical work.")
       }
 
-      const sessionToken = session?.access_token || null
-      await api.completeConversationalActivity(activity.student_activity_id, conversationHistory, sessionToken || undefined)
+      await api.completeConversationalActivity(
+        activity.student_activity_id, 
+        conversationHistory, 
+        sessionToken || undefined,
+        understandingScore ?? undefined,
+        assessmentFeedback ?? undefined
+      )
+      
+      // Reload activity to get updated status from server
+      try {
+        const updatedData = await api.getStudentActivity(activityId, sessionToken || undefined)
+        if (updatedData && updatedData.student_activity) {
+          setActivity({
+            ...updatedData.student_activity,
+            activity_id: updatedData.activity.activity_id,
+          } as StudentActivityType)
+        }
+      } catch (error) {
+        console.error('Error reloading activity:', error)
+      }
       
       setCompleted(true)
       setCurrentPhase('complete')
-      setActivity(prev => prev ? { ...prev, status: 'completed' } : null)
       
       const finalMessage: Message = {
         role: 'assistant',
@@ -381,80 +422,69 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Fixed Header */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-4 shadow-sm">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4 min-w-0 flex-1">
+      {/* Navigation Bar - matching design */}
+      <Navbar
+        leftContent={
+          <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/student')}
               className="p-1.5 hover:bg-slate-100 rounded-lg transition-all duration-200 flex-shrink-0 group"
             >
-              <ArrowLeft className="w-5 h-5 text-slate-600 group-hover:text-slate-900 group-hover:-translate-x-0.5 transition-all" />
+              <ArrowLeft className="w-4 h-4 text-slate-600 group-hover:text-slate-900 group-hover:-translate-x-0.5 transition-all" />
             </button>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-lg font-semibold text-slate-900 truncate tracking-tight">{activityTitle}</h1>
-              <div className="flex items-center gap-3 mt-1">
+            <div className="min-w-0">
+              <h1 className="text-xs sm:text-sm font-semibold text-slate-900 truncate tracking-tight">{activityTitle}</h1>
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
                 <span className="text-xs text-slate-500 capitalize font-medium">{currentPhase.replace('_', ' ')}</span>
-                <span className="text-xs text-slate-300">•</span>
+                <span className="text-xs text-slate-300 hidden sm:inline">•</span>
                 <div className="flex items-center text-xs text-slate-500">
-                  <Clock className="w-3 h-3 mr-1.5" />
+                  <Clock className="w-3 h-3 mr-1" />
                   {timeSpent} min
                 </div>
               </div>
             </div>
           </div>
-          
-          {!completed && (() => {
-            const userMessageCount = messages.filter(m => m.role === 'user').length
-            const totalExchanges = Math.ceil(messages.length / 2)
-            const userMessages = messages.filter(m => m.role === 'user').map(m => m.content.toLowerCase())
-            
-            // Check for actual mathematical work, not just greetings
-            const hasMathematicalWork = userMessages.some(content => {
-              const mathIndicators = [
-                'solve', 'answer', 'calculate', 'work', 'step', 'equation', 'problem',
-                'example', 'explain', 'understand', 'think', 'try', 'attempt', 'got',
-                'result', 'answer is', 'equals', '=', '+', '-', '*', '/', 'x', 'y'
-              ]
-              return mathIndicators.some(indicator => content.includes(indicator))
-            })
-            
-            // Require at least 2 user messages with some mathematical content
-            const canComplete = userMessageCount >= 2 && (hasMathematicalWork || userMessageCount >= 3)
-            
-            return (
-              <button
-                onClick={completeActivity}
-                disabled={isCompleting || sending || !canComplete}
-                className={`px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium flex-shrink-0 ${
-                  canComplete
-                    ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-sm hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed'
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                }`}
-                title={!canComplete 
-                  ? `Engage more with the activity. Complete activities require demonstrating understanding through problem-solving (${userMessageCount} message${userMessageCount !== 1 ? 's' : ''} so far).`
-                  : `Complete activity (${totalExchanges} exchange${totalExchanges !== 1 ? 's' : ''})`
-                }
-              >
+        }
+        rightContent={
+          !completed ? (
+            <button
+              onClick={completeActivity}
+              disabled={isCompleting || sending || !userMessageStats.canComplete}
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all duration-200 text-xs sm:text-sm font-medium flex-shrink-0 ${
+                userMessageStats.canComplete
+                  ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-sm hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed'
+                  : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+              }`}
+              title={!userMessageStats.canComplete 
+                ? `Engage more with the activity. Complete activities require demonstrating understanding through problem-solving (${userMessageStats.count} message${userMessageStats.count !== 1 ? 's' : ''} so far).`
+                : `Complete activity (${userMessageStats.totalExchanges} exchange${userMessageStats.totalExchanges !== 1 ? 's' : ''})`
+              }
+            >
+              <span className="hidden sm:inline">
                 {isCompleting 
                   ? 'Completing...' 
-                  : canComplete 
-                    ? `Complete${totalExchanges > 1 ? ` (${totalExchanges})` : ''}`
-                    : userMessageCount === 0
+                  : userMessageStats.canComplete 
+                    ? `Complete${userMessageStats.totalExchanges > 1 ? ` (${userMessageStats.totalExchanges})` : ''}`
+                    : userMessageStats.count === 0
                       ? 'Start conversation'
-                      : `Engage more (${userMessageCount})`
+                      : `Engage more (${userMessageStats.count})`
                 }
-              </button>
-            )
-          })()}
-        </div>
-      </header>
+              </span>
+              <span className="sm:hidden">
+                {isCompleting ? '...' : userMessageStats.canComplete ? 'Complete' : 'Start'}
+              </span>
+            </button>
+          ) : (
+            <Auth />
+          )
+        }
+      />
 
       {/* Chat Container */}
       <main className="flex-1 overflow-hidden">
-        <div className="max-w-3xl mx-auto h-full flex flex-col px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto h-full flex flex-col px-3 sm:px-4 md:px-6 lg:px-8">
           {/* Messages Container */}
-          <div className="flex-1 overflow-y-auto py-12 space-y-10 pb-24 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+          <div className="flex-1 overflow-y-auto py-8 sm:py-12 space-y-6 sm:space-y-10 pb-20 sm:pb-24 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
             {messages.map((message, index) => {
               const isUser = message.role === 'user'
               const showAvatar = index === 0 || messages[index - 1]?.role !== message.role
@@ -519,10 +549,10 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
 
       {/* Input Area */}
       {currentPhase !== 'complete' && (
-        <div className="sticky bottom-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 sm:px-6 lg:px-8 py-5 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="sticky bottom-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <div className="max-w-3xl mx-auto">
-            <form onSubmit={handleSubmit} className="flex items-end gap-4">
-              <div className="flex-1 border-b-2 border-slate-300 focus-within:border-slate-900 transition-colors duration-200 pb-2.5">
+            <form onSubmit={handleSubmit} className="flex items-end gap-2 sm:gap-4">
+              <div className="flex-1 border-b-2 border-slate-300 focus-within:border-slate-900 transition-colors duration-200 pb-2 sm:pb-2.5">
                 <input
                   type="text"
                   value={input}
@@ -533,14 +563,14 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
                     currentPhase === 'evaluate' ? "Show what you've learned..." :
                     "Type your message..."
                   }
-                  className="w-full border-none outline-none bg-transparent text-slate-900 placeholder-slate-400 text-[15px] leading-relaxed"
+                  className="w-full border-none outline-none bg-transparent text-slate-900 placeholder-slate-400 text-sm sm:text-[15px] leading-relaxed"
                   disabled={sending}
                 />
               </div>
               <button
                 type="submit"
                 disabled={!input.trim() || sending}
-                className="px-5 py-2.5 text-slate-900 hover:text-slate-700 disabled:text-slate-300 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium flex-shrink-0 hover:bg-slate-50 rounded-lg -mb-0.5"
+                className="px-4 sm:px-5 py-2 sm:py-2.5 text-slate-900 hover:text-slate-700 disabled:text-slate-300 disabled:cursor-not-allowed transition-all duration-200 text-xs sm:text-sm font-medium flex-shrink-0 hover:bg-slate-50 rounded-lg -mb-0.5"
               >
                 Send
               </button>
@@ -602,7 +632,11 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
             </div>
             
             <button
-              onClick={() => router.push('/student')}
+              onClick={() => {
+                // Navigate back to student dashboard
+                // The parent page will refresh activities automatically
+                router.push('/student')
+              }}
               className="w-full py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
             >
               Return to Dashboard

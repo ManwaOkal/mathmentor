@@ -1,19 +1,35 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { LogIn, LogOut, User } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
+import { useRouter } from 'next/navigation'
+import { LogIn, LogOut, User, ChevronDown } from 'lucide-react'
 import { useAuth } from '../lib/auth/useAuth'
 import { UserRole } from '../lib/auth/types'
 
 export default function Auth() {
   const { user, profile, signIn, signUp, signOut, loading } = useAuth()
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [isLogin, setIsLogin] = useState(true)
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [isOpen])
 
   // Listen for custom event to open auth modal
   useEffect(() => {
     const handleOpenAuth = (e: CustomEvent) => {
       setIsOpen(true)
+      setJustLoggedIn(false) // Reset flag when opening modal
       if (e.detail?.signup) {
         setIsLogin(false)
       } else {
@@ -31,7 +47,11 @@ export default function Auth() {
   const [name, setName] = useState('')
   const [role, setRole] = useState<UserRole>(UserRole.STUDENT)
   const [authLoading, setAuthLoading] = useState(false)
+  const [logoutLoading, setLogoutLoading] = useState(false)
   const [error, setError] = useState('')
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [justLoggedIn, setJustLoggedIn] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,8 +63,14 @@ export default function Auth() {
         const { error: signInError } = await signIn(email, password)
         if (signInError) {
           setError(signInError.message || 'Failed to sign in')
+          setAuthLoading(false)
           return
         }
+        // Success - mark that we just logged in
+        setJustLoggedIn(true)
+        setIsOpen(false)
+        setEmail('')
+        setPassword('')
       } else {
         // Validate signup fields
         if (!name.trim()) {
@@ -80,12 +106,91 @@ export default function Auth() {
   }
 
   const handleLogout = async () => {
+    if (logoutLoading) return // Prevent double-clicks
+    
     try {
+      setLogoutLoading(true)
+      setError('')
+      setDropdownOpen(false)
+      // Clear form state
+      setIsOpen(false)
+      setEmail('')
+      setPassword('')
+      setName('')
+      setRole(UserRole.STUDENT)
+      // Sign out
       await signOut()
+      // Small delay to ensure state is cleared
+      await new Promise(resolve => setTimeout(resolve, 200))
+      // Redirect to homepage with a parameter to prevent auto-login
+      window.location.href = '/?logged_out=true'
     } catch (err) {
+      console.error('Logout error:', err)
       setError(err instanceof Error ? err.message : 'Failed to sign out')
+      // Even if there's an error, try to redirect and clear storage
+      if (typeof window !== 'undefined') {
+        const keysToRemove: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+            keysToRemove.push(key)
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key))
+      }
+      setTimeout(() => {
+        window.location.href = '/?logged_out=true'
+      }, 500)
+    } finally {
+      setLogoutLoading(false)
     }
   }
+
+  // Redirect after successful login
+  useEffect(() => {
+    // Only redirect if we just logged in and modal is closed
+    if (justLoggedIn && !loading && user && !isOpen) {
+      // If profile exists, redirect immediately
+      if (profile) {
+        setJustLoggedIn(false) // Reset flag
+        if (profile.role === UserRole.TEACHER || profile.role === UserRole.ADMIN) {
+          router.push('/teacher')
+        } else if (profile.role === UserRole.STUDENT) {
+          router.push('/student')
+        }
+      } else {
+        // If profile doesn't exist yet, check metadata for role
+        const roleFromMetadata = user.user_metadata?.role
+        if (roleFromMetadata === 'teacher' || roleFromMetadata === 'admin') {
+          setJustLoggedIn(false) // Reset flag
+          router.push('/teacher')
+        } else if (roleFromMetadata === 'student' || !roleFromMetadata) {
+          // Default to student if no role specified
+          setJustLoggedIn(false) // Reset flag
+          router.push('/student')
+        }
+      }
+    }
+  }, [justLoggedIn, user, profile, loading, isOpen, router])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!user || !profile) return
+    
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [dropdownOpen, user, profile])
 
   if (loading) {
     return (
@@ -97,35 +202,66 @@ export default function Auth() {
 
   if (user && profile) {
     return (
-      <div className="flex items-center space-x-2 sm:space-x-3">
-        <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-700">
-          <User className="w-4 h-4" />
-          <div className="hidden sm:flex flex-col">
-            <span className="max-w-[120px] lg:max-w-none truncate font-medium">
+      <div className="relative" ref={dropdownRef}>
+        <button
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          className="flex items-center gap-3 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors group opacity-90 hover:opacity-100"
+        >
+          {/* User info with integrated badge - reduced prominence */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-slate-500" />
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
+              <div className="flex flex-col items-start">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-slate-700 max-w-[100px] truncate">
+                    {profile.name}
+                  </span>
+                  <span className="px-1.5 py-0.5 text-[10px] font-medium bg-slate-100 text-slate-500 rounded uppercase tracking-wide opacity-75">
+                    {profile.role}
+                  </span>
+                </div>
+                <span className="text-xs text-slate-400 max-w-[140px] truncate">
+                  {profile.email}
+                </span>
+              </div>
+            </div>
+            <span className="sm:hidden text-sm font-medium text-slate-700 max-w-[80px] truncate">
               {profile.name}
             </span>
-            <span className="text-xs text-gray-500 truncate max-w-[120px] lg:max-w-none">
-              {profile.email}
-            </span>
           </div>
-          <span className="sm:hidden max-w-[80px] truncate">{profile.name}</span>
-        </div>
-        <div className="hidden sm:block px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
-          {profile.role}
-        </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          <span className="hidden sm:inline">Logout</span>
+          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
         </button>
+
+        {/* Dropdown menu */}
+        {dropdownOpen && (
+          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
+            <div className="px-4 py-3 border-b border-slate-100 sm:hidden">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-medium text-slate-900">{profile.name}</span>
+                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-slate-100 text-slate-600 rounded uppercase">
+                  {profile.role}
+                </span>
+              </div>
+              <span className="text-xs text-slate-500">{profile.email}</span>
+            </div>
+            <button
+              onClick={handleLogout}
+              disabled={logoutLoading}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>{logoutLoading ? 'Signing out...' : 'Sign out'}</span>
+            </button>
+          </div>
+        )}
       </div>
     )
   }
 
   return (
-    <>
+    <div>
       <div className="flex items-center gap-3">
         <button
           onClick={() => setIsOpen(true)}
@@ -143,31 +279,43 @@ export default function Auth() {
           Get Started
         </button>
       </div>
-
-      {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                {isLogin ? 'Login' : 'Sign Up'}
+      {isOpen && typeof window !== 'undefined' && createPortal(
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsOpen(false)
+            }
+          }}
+        >
+          <div className="min-h-full flex items-center justify-center p-4 sm:p-6">
+            <div 
+              className="bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 p-5 sm:p-6 md:p-8 w-full max-w-md my-8 relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+            <div className="flex justify-between items-center mb-5 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
+                {isLogin ? 'Welcome Back' : 'Create Your Account'}
               </h2>
               <button
                 onClick={() => {
                   setIsOpen(false)
+                  setJustLoggedIn(false) // Reset flag when closing modal manually
                   setError('')
                   setEmail('')
                   setPassword('')
                   setName('')
                 }}
-                className="text-gray-400 hover:text-gray-600 text-xl"
+                className="text-slate-400 hover:text-slate-600 transition-colors text-xl sm:text-2xl leading-none w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full hover:bg-slate-100"
+                aria-label="Close"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                   {error}
                 </div>
               )}
@@ -175,7 +323,7 @@ export default function Auth() {
               {!isLogin && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
                       Full Name
                     </label>
                     <input
@@ -183,23 +331,23 @@ export default function Auth() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required={!isLogin}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base text-gray-900"
+                      className="w-full px-4 py-2.5 sm:py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-sm sm:text-base text-slate-900 placeholder:text-slate-400 transition-all"
                       placeholder="John Doe"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
                       Account Type
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
                         onClick={() => setRole(UserRole.STUDENT)}
-                        className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
+                        className={`px-4 py-2.5 sm:py-3 rounded-lg border-2 transition-all text-sm sm:text-base font-medium ${
                           role === UserRole.STUDENT
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                            ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-400'
                         }`}
                       >
                         Student
@@ -207,10 +355,10 @@ export default function Auth() {
                       <button
                         type="button"
                         onClick={() => setRole(UserRole.TEACHER)}
-                        className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
+                        className={`px-4 py-2.5 sm:py-3 rounded-lg border-2 transition-all text-sm sm:text-base font-medium ${
                           role === UserRole.TEACHER
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                            ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-400'
                         }`}
                       >
                         Teacher
@@ -221,7 +369,7 @@ export default function Auth() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Email
                 </label>
                 <input
@@ -229,13 +377,13 @@ export default function Auth() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base text-gray-900"
+                  className="w-full px-4 py-2.5 sm:py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-sm sm:text-base text-slate-900 placeholder:text-slate-400 transition-all"
                   placeholder="you@example.com"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Password
                 </label>
                 <input
@@ -244,17 +392,17 @@ export default function Auth() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={isLogin ? undefined : 6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base text-gray-900"
+                  className="w-full px-4 py-2.5 sm:py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-sm sm:text-base text-slate-900 placeholder:text-slate-400 transition-all"
                   placeholder="••••••••"
                 />
                 {!isLogin && (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1.5 text-xs text-slate-500">
                     Password must be at least 6 characters
                   </p>
                 )}
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pt-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -265,7 +413,7 @@ export default function Auth() {
                     setName('')
                     setRole(UserRole.STUDENT)
                   }}
-                  className="text-xs sm:text-sm text-blue-600 hover:text-blue-700"
+                  className="text-xs sm:text-sm text-slate-600 hover:text-slate-900 font-medium transition-colors"
                 >
                   {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Login'}
                 </button>
@@ -274,14 +422,23 @@ export default function Auth() {
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base font-medium"
+                className="w-full bg-slate-900 text-white py-3 sm:py-3.5 px-4 rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm sm:text-base font-medium shadow-sm hover:shadow-md min-h-[44px] flex items-center justify-center"
               >
-                {authLoading ? 'Loading...' : isLogin ? 'Login' : 'Sign Up'}
+                {authLoading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Loading...</span>
+                  </span>
+                ) : (
+                  isLogin ? 'Sign In' : 'Create Account'
+                )}
               </button>
             </form>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </>
+    </div>
   )
 }

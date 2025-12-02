@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { TrendingUp, Users, CheckCircle, AlertCircle, Award, BookOpen } from 'lucide-react'
 import { ClassroomAnalytics } from '@/lib/auth/types'
 import { api } from '@/lib/api'
+import { useAuth } from '@/lib/auth/useAuth'
 
 interface AnalyticsDashboardProps {
   classroomId: string
-  timeRange?: 'week' | 'month' | 'custom'
 }
 
 interface StudentPerformance {
@@ -25,23 +25,20 @@ interface ScoreDistribution {
 }
 
 export default function AnalyticsDashboard({ 
-  classroomId, 
-  timeRange = 'week' 
+  classroomId
 }: AnalyticsDashboardProps) {
+  const { session } = useAuth()
   const [analytics, setAnalytics] = useState<ClassroomAnalytics | null>(null)
   const [studentPerformance, setStudentPerformance] = useState<StudentPerformance[]>([])
   const [scoreDistribution, setScoreDistribution] = useState<ScoreDistribution[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedTimeRange, setSelectedTimeRange] = useState<'week' | 'month' | 'custom'>(timeRange)
 
-  useEffect(() => {
-    fetchAnalytics()
-  }, [classroomId, selectedTimeRange])
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
+    if (!session?.access_token) return
+    
     setLoading(true)
     try {
-      const data = await api.getClassroomAnalytics(classroomId, selectedTimeRange)
+      const data = await api.getClassroomAnalytics(classroomId, 'week', session.access_token)
       if (data) {
         // Map API response to analytics state
         setAnalytics({
@@ -67,7 +64,16 @@ export default function AnalyticsDashboard({
     } finally {
       setLoading(false)
     }
-  }
+  }, [classroomId, session?.access_token])
+
+  useEffect(() => {
+    if (!session?.access_token || !classroomId) return
+    
+    fetchAnalytics()
+    // Auto-refresh every 30 seconds to get updated analytics (reduced frequency)
+    const interval = setInterval(fetchAnalytics, 30000)
+    return () => clearInterval(interval)
+  }, [fetchAnalytics])
 
   if (loading) {
     return (
@@ -80,36 +86,19 @@ export default function AnalyticsDashboard({
   return (
     <div className="space-y-12">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-        <div>
-          <h2 className="text-3xl font-light text-slate-900 tracking-tight mb-1">Analytics</h2>
-          <p className="text-sm text-slate-500 font-light">Classroom performance overview</p>
-        </div>
-        <div className="flex space-x-1">
-          {(['week', 'month', 'custom'] as const).map((range) => (
-            <button
-              key={range}
-              onClick={() => setSelectedTimeRange(range)}
-              className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${
-                selectedTimeRange === range
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              {range.charAt(0).toUpperCase() + range.slice(1)}
-            </button>
-          ))}
-        </div>
+      <div className="pb-4 border-b border-slate-100">
+        <h2 className="text-2xl sm:text-3xl font-light text-slate-900 tracking-tight mb-1">Analytics</h2>
+        <p className="text-xs sm:text-sm text-slate-500 font-light">Classroom performance overview</p>
       </div>
 
       {/* Overview Metrics - Rebalanced Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
         {/* First metric - left aligned, prominent */}
-        <div className="md:col-span-1">
+        <div className="sm:col-span-1">
           <div className="space-y-2">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Students</p>
             <div className="flex items-baseline space-x-3">
-              <p className="text-4xl font-light text-slate-900">{analytics?.total_students || 0}</p>
+              <p className="text-3xl sm:text-4xl font-light text-slate-900">{analytics?.total_students || 0}</p>
               <div className="p-2 rounded-lg bg-slate-50">
                 <Users className="w-4 h-4 text-slate-600" />
               </div>
@@ -118,11 +107,11 @@ export default function AnalyticsDashboard({
         </div>
 
         {/* Middle two metrics - grouped tighter */}
-        <div className="md:col-span-2 grid grid-cols-2 gap-8">
+        <div className="sm:col-span-2 lg:col-span-2 grid grid-cols-2 gap-6 sm:gap-8">
           <div className="space-y-2">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Average Score</p>
             <div className="flex items-baseline space-x-2">
-              <p className="text-3xl font-light text-slate-900">
+              <p className="text-2xl sm:text-3xl font-light text-slate-900">
                 {analytics?.average_score ? `${analytics.average_score.toFixed(1)}%` : 'N/A'}
               </p>
               <TrendingUp className="w-4 h-4 text-slate-400" />
@@ -131,7 +120,7 @@ export default function AnalyticsDashboard({
           <div className="space-y-2">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Completion</p>
             <div className="flex items-baseline space-x-2">
-              <p className="text-3xl font-light text-slate-900">
+              <p className="text-2xl sm:text-3xl font-light text-slate-900">
                 {analytics?.total_activities_assigned
                   ? `${((analytics.completed_activities || 0) / analytics.total_activities_assigned * 100).toFixed(1)}%`
                   : 'N/A'}
@@ -142,12 +131,12 @@ export default function AnalyticsDashboard({
         </div>
 
         {/* Last metric - slightly offset */}
-        <div className="md:col-span-1 md:text-right">
-          <div className="space-y-2 inline-block">
+        <div className="sm:col-span-1 lg:col-span-1 lg:text-right">
+          <div className="space-y-2 lg:inline-block">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Active</p>
-            <div className="flex items-baseline justify-end space-x-2">
+            <div className="flex items-baseline lg:justify-end space-x-2">
               <Award className="w-4 h-4 text-slate-400" />
-              <p className="text-3xl font-light text-slate-900">{analytics?.active_students || 0}</p>
+              <p className="text-3xl sm:text-4xl font-light text-slate-900">{analytics?.active_students || 0}</p>
             </div>
           </div>
         </div>
@@ -277,68 +266,73 @@ export default function AnalyticsDashboard({
 
       {/* Student Performance Table */}
       <div>
-        <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-8">Student Performance</h3>
+        <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-6 sm:mb-8">Student Performance</h3>
         {studentPerformance.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="px-0 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Student
-                  </th>
-                  <th className="px-0 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Completed
-                  </th>
-                  <th className="px-0 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Average Score
-                  </th>
-                  <th className="px-0 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Last Activity
-                  </th>
-                  <th className="px-0 py-4 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {studentPerformance.map((student, idx) => (
-                  <tr 
-                    key={student.student_id} 
-                    className={`border-b border-slate-50 hover:bg-slate-50/50 transition-colors ${
-                      idx === studentPerformance.length - 1 ? 'border-b-0' : ''
-                    }`}
-                  >
-                    <td className="px-0 py-5 whitespace-nowrap">
-                      <div className="font-medium text-slate-900">{student.name}</div>
-                    </td>
-                    <td className="px-0 py-5 whitespace-nowrap text-sm text-slate-600 font-light">
-                      {student.completed_activities} / {student.total_activities}
-                    </td>
-                    <td className="px-0 py-5 whitespace-nowrap">
-                      <span className="text-sm font-medium text-slate-900">
-                        {student.average_score.toFixed(1)}%
-                      </span>
-                    </td>
-                    <td className="px-0 py-5 whitespace-nowrap text-sm text-slate-600 font-light">
-                      {student.last_activity_date
-                        ? new Date(student.last_activity_date).toLocaleDateString()
-                        : 'N/A'}
-                    </td>
-                    <td className="px-0 py-5 whitespace-nowrap text-right">
-                      <button
-                        onClick={() => {
-                          // TODO: Navigate to student detail page
-                          console.log('View student:', student.student_id)
-                        }}
-                        className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors"
-                      >
-                        View →
-                      </button>
-                    </td>
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    <th className="px-2 sm:px-0 py-3 sm:py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Student
+                    </th>
+                    <th className="px-2 sm:px-0 py-3 sm:py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider hidden sm:table-cell">
+                      Completed
+                    </th>
+                    <th className="px-2 sm:px-0 py-3 sm:py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Score
+                    </th>
+                    <th className="px-2 sm:px-0 py-3 sm:py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider hidden md:table-cell">
+                      Last Activity
+                    </th>
+                    <th className="px-2 sm:px-0 py-3 sm:py-4 text-right text-xs font-medium text-slate-500 uppercase tracking-wider hidden lg:table-cell">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {studentPerformance.map((student, idx) => (
+                    <tr 
+                      key={student.student_id} 
+                      className={`border-b border-slate-50 hover:bg-slate-50/50 transition-colors ${
+                        idx === studentPerformance.length - 1 ? 'border-b-0' : ''
+                      }`}
+                    >
+                      <td className="px-2 sm:px-0 py-4 sm:py-5">
+                        <div className="font-medium text-slate-900 text-sm sm:text-base">{student.name}</div>
+                        <div className="text-xs text-slate-500 sm:hidden mt-1">
+                          {student.completed_activities} / {student.total_activities} completed
+                        </div>
+                      </td>
+                      <td className="px-2 sm:px-0 py-4 sm:py-5 whitespace-nowrap text-sm text-slate-600 font-light hidden sm:table-cell">
+                        {student.completed_activities} / {student.total_activities}
+                      </td>
+                      <td className="px-2 sm:px-0 py-4 sm:py-5 whitespace-nowrap">
+                        <span className="text-sm font-medium text-slate-900">
+                          {student.average_score.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="px-2 sm:px-0 py-4 sm:py-5 whitespace-nowrap text-xs sm:text-sm text-slate-600 font-light hidden md:table-cell">
+                        {student.last_activity_date
+                          ? new Date(student.last_activity_date).toLocaleDateString()
+                          : 'N/A'}
+                      </td>
+                      <td className="px-2 sm:px-0 py-4 sm:py-5 whitespace-nowrap text-right hidden lg:table-cell">
+                        <button
+                          onClick={() => {
+                            // TODO: Navigate to student detail page
+                            console.log('View student:', student.student_id)
+                          }}
+                          className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                        >
+                          View →
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : (
           <div className="text-center py-20">

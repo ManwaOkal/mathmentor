@@ -296,12 +296,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async (): Promise<void> => {
     try {
-      await supabase.auth.signOut()
+      // Clear local state first
       setUser(null)
       setProfile(null)
       setSession(null)
+      
+      // Sign out from Supabase (this will trigger onAuthStateChange)
+      const { error } = await supabase.auth.signOut({ scope: 'global' })
+      if (error) {
+        console.error('Error signing out:', error)
+        // Continue anyway to clear local storage
+      }
+      
+      // Clear any persisted session data from localStorage
+      if (typeof window !== 'undefined') {
+        // Clear Supabase session from localStorage
+        const keysToRemove: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && (key.startsWith('sb-') || key.includes('supabase.auth'))) {
+            keysToRemove.push(key)
+          }
+        }
+        keysToRemove.forEach(key => {
+          try {
+            localStorage.removeItem(key)
+          } catch (e) {
+            console.warn('Failed to remove localStorage key:', key, e)
+          }
+        })
+        
+        // Also try to clear sessionStorage
+        try {
+          sessionStorage.clear()
+        } catch (e) {
+          console.warn('Failed to clear sessionStorage:', e)
+        }
+      }
+      
+      // Wait a bit for the auth state change to propagate
+      await new Promise(resolve => setTimeout(resolve, 100))
     } catch (error) {
       console.error('Error signing out:', error)
+      // Even if there's an error, clear local state and storage
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+      if (typeof window !== 'undefined') {
+        try {
+          const keysToRemove: string[] = []
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (key && (key.startsWith('sb-') || key.includes('supabase.auth'))) {
+              keysToRemove.push(key)
+            }
+          }
+          keysToRemove.forEach(key => localStorage.removeItem(key))
+        } catch (e) {
+          console.warn('Failed to clear localStorage on error:', e)
+        }
+      }
       throw error
     }
   }
