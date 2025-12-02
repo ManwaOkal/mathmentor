@@ -192,16 +192,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setProfile(getUserProfile(session.user))
           } else if (mounted) {
             // Profile doesn't exist, try to create it (but don't block)
+            // This is a fallback in case the database trigger didn't work
             const role = profileFromMetadata?.role || UserRole.STUDENT
+            console.log('Profile not found in database, attempting to create...')
             createUserProfile(
               session.user.id,
               session.user.email!,
               role,
               session.user.user_metadata?.name
-            ).catch((error: any) => {
-              // Handle RLS errors gracefully - profile will be created on next login
+            ).then(() => {
+              console.log('Profile created successfully on login')
+              // Reload profile after creation
+              if (mounted) {
+                loadUserProfile(session.user.id).then((newProfile) => {
+                  if (newProfile && mounted) {
+                    setProfile(getUserProfile(session.user))
+                  }
+                }).catch(() => {
+                  // Ignore errors
+                })
+              }
+            }).catch((error: any) => {
+              // Handle errors gracefully
               if (error?.code === '42501') {
-                console.log('Profile creation blocked by RLS (will retry on next auth check)')
+                console.warn('Profile creation blocked by RLS. Trigger should have created it.')
+              } else if (error?.code === '23505') {
+                console.log('Profile already exists (race condition)')
               } else {
                 console.error('Error creating profile (non-blocking):', error)
               }
