@@ -91,14 +91,24 @@ class CreateConversationalActivityRequest(BaseModel):
 
 # Helper function to get current teacher (simplified - in production, verify JWT)
 async def get_current_teacher(authorization: Optional[str] = Header(None)):
-    """Get current teacher user. In production, extract from JWT token."""
+    """Get current teacher user. Extract user ID from JWT token."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Authentication required")
     
-    user_id = authorization.replace("Bearer ", "")
-    # In production, verify JWT and get user metadata
-    # For now, assume user_id is provided and check role
-    return {"id": user_id, "role": "teacher"}
+    token = authorization.replace("Bearer ", "")
+    
+    # Verify JWT and extract user ID
+    from lib.jwt_verify import verify_supabase_token
+    user_info = verify_supabase_token(token)
+    
+    if not user_info:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    # Verify user is a teacher
+    if user_info.get("role") != "teacher":
+        raise HTTPException(status_code=403, detail="Access denied: Teacher role required")
+    
+    return {"id": user_info["id"], "role": "teacher"}
 
 @router.post("/classrooms", response_model=ClassroomResponse)
 async def create_classroom(
