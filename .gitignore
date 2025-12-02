@@ -1,0 +1,60 @@
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Node
+node_modules/
+node_modules 2/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.next/
+out/
+build/
+dist/
+
+# Supabase
+.branches
+.temp
+supabase/.branches
+supabase/.temp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Misc
+*.db
+*.sqlite
+

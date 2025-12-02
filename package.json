@@ -1,0 +1,29 @@
+{
+  "name": "mathmentor",
+  "version": "1.0.0",
+  "description": "RAG-Based AI Math Tutor Platform",
+  "main": "index.js",
+  "scripts": {
+    "test:supabase": "node test_supabase.js",
+    "test:supabase:ts": "ts-node --compiler-options '{\"module\":\"commonjs\"}' test_supabase.ts"
+  },
+  "keywords": [
+    "math",
+    "tutor",
+    "rag",
+    "ai",
+    "education"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
+
