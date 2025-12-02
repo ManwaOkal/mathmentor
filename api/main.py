@@ -46,9 +46,36 @@ from fastapi.middleware.gzip import GZipMiddleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # CORS middleware
+# Get allowed origins from environment variable or use defaults
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_env:
+    allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+else:
+    # Default origins including localhost and Vercel
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://mathmentor-szbw2.vercel.app",
+    ]
+
+# Custom CORS handler to allow all Vercel deployments
+def is_origin_allowed(origin: str) -> bool:
+    """Check if origin is allowed, including Vercel deployments."""
+    if not origin:
+        return False
+    # Allow localhost for development
+    if origin.startswith("http://localhost"):
+        return True
+    # Allow all Vercel deployments
+    if origin.endswith(".vercel.app"):
+        return True
+    # Check against explicit list
+    return origin in allowed_origins
+
+# Use a more permissive CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_origin_regex=r"https?://(localhost|.*\.vercel\.app)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
