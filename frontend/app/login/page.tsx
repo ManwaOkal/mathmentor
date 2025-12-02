@@ -83,14 +83,19 @@ function LoginContent() {
           return
         }
         
-        // Show success message
+        // Show success message and reset form
         setError('')
-        alert('Account created! Please check your email to verify your account before signing in.')
+        setAuthLoading(false)
         setIsLogin(true)
         setEmail('')
         setPassword('')
         setName('')
         setRole(UserRole.STUDENT)
+        
+        // Show success message after state updates
+        setTimeout(() => {
+          alert('Account created successfully! You can now sign in.')
+        }, 100)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
