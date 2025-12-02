@@ -153,9 +153,7 @@ function HomeContent() {
                   <ArrowRight className="w-4 h-4" />
                 </button>
                 <a
-                  href="https://careyokal.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="mailto:careyoka@gmail.com"
                   className="px-6 py-3 sm:py-3.5 bg-white text-slate-900 border-2 border-slate-900 rounded-lg hover:bg-slate-50 transition-all font-medium text-center text-sm sm:text-base min-h-[44px] flex items-center justify-center"
                 >
                   Contact Us
@@ -470,9 +468,7 @@ function HomeContent() {
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <a
-              href="https://careyokal.com"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="mailto:careyoka@gmail.com"
               className="px-6 sm:px-8 py-3 sm:py-4 bg-transparent text-white border-2 border-white rounded-lg hover:bg-white/10 transition-all font-medium text-center text-sm sm:text-base min-h-[44px] flex items-center justify-center"
             >
               Contact Us
@@ -499,9 +495,7 @@ function HomeContent() {
             </p>
             <div className="text-center">
               <a 
-                href="https://careyokal.com"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="mailto:careyoka@gmail.com"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-medium text-sm sm:text-base min-h-[44px]"
               >
                 <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
