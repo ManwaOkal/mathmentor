@@ -150,14 +150,12 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
         // Get activity introduction and automatically start teaching
         try {
           const introResponse = await api.getActivityIntroduction(data.activity.activity_id)
-          // Handle both string response and object response
-          const introData = typeof introResponse === 'string' ? introResponse : introResponse?.introduction || introResponse
           
           // Ensure we have valid introduction data
-          if (introData && introData.trim() && !introData.includes('Welcome\n\n\n\nI\'m your')) {
+          if (introResponse && introResponse.trim() && !introResponse.includes('Welcome\n\n\n\nI\'m your')) {
             const introMessage: Message = {
               role: 'assistant',
-              content: introData,
+              content: introResponse,
               timestamp: new Date(),
               id: 'intro'
             }
