@@ -211,20 +211,116 @@ function HomeContent() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
             <div className="text-center">
-              <div className="text-3xl sm:text-4xl md:text-5xl font-bold mb-1 sm:mb-2">3x</div>
-              <div className="text-xs sm:text-sm md:text-base text-slate-300 px-2">Faster Understanding</div>
+              <div className="text-3xl sm:text-4xl md:text-5xl font-bold mb-1 sm:mb-2">10+</div>
+              <div className="text-xs sm:text-sm md:text-base text-slate-300 px-2">Schools Across Kenya</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl sm:text-4xl md:text-5xl font-bold mb-1 sm:mb-2">100+</div>
-              <div className="text-xs sm:text-sm md:text-base text-slate-300 px-2">students helped</div>
+              <div className="text-3xl sm:text-4xl md:text-5xl font-bold mb-1 sm:mb-2">8,000+</div>
+              <div className="text-xs sm:text-sm md:text-base text-slate-300 px-2">Students Reached</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl sm:text-4xl md:text-5xl font-bold mb-1 sm:mb-2">99%</div>
-              <div className="text-xs sm:text-sm md:text-base text-slate-300 px-2">Accuracy Rate</div>
+              <div className="text-3xl sm:text-4xl md:text-5xl font-bold mb-1 sm:mb-2">$5K</div>
+              <div className="text-xs sm:text-sm md:text-base text-slate-300 px-2">KCB Bank Funding</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl sm:text-4xl md:text-5xl font-bold mb-1 sm:mb-2">100%</div>
-              <div className="text-xs sm:text-sm md:text-base text-slate-300 px-2">Personalized</div>
+              <div className="text-3xl sm:text-4xl md:text-5xl font-bold mb-1 sm:mb-2">1st</div>
+              <div className="text-xs sm:text-sm md:text-base text-slate-300 px-2">Hack4Impact Winner</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Schools Section */}
+      <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-3 sm:mb-4 px-4">
+              Trusted by Schools Across Kenya
+            </h2>
+            <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto px-4">
+              Join these schools already using MathMentor to transform their math education
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 mb-2">
+                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
+                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Chavakali High School</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600">Vihiga</p>
+            </div>
+            
+            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 mb-2">
+                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
+                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Darajambili Secondary School</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600">Kisii</p>
+            </div>
+            
+            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 mb-2">
+                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
+                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">St. Benedicts Mixed Academy</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600">Nairobi</p>
+            </div>
+            
+            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 mb-2">
+                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
+                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Hannington Academy</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600">Oyugis</p>
+            </div>
+            
+            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 mb-2">
+                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
+                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Nyansiongo High School</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600">Kisii</p>
+            </div>
+            
+            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 mb-2">
+                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
+                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Agoro Sare High School</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600">Homabay</p>
+            </div>
+            
+            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 mb-2">
+                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
+                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Kisumu Day High School</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600">Kisumu</p>
+            </div>
+            
+            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 mb-2">
+                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
+                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Kisii High School</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600">Kisii</p>
+            </div>
+            
+            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 mb-2">
+                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
+                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Clanne Junior High School</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600">Busia</p>
+            </div>
+            
+            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 mb-2">
+                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
+                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Zigma Junior Secondary School</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600">Busia</p>
             </div>
           </div>
         </div>
