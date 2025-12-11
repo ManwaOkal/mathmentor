@@ -162,10 +162,18 @@ async def join_classroom(
         if not enrollment_result.data:
             raise HTTPException(status_code=500, detail="Failed to join classroom")
         
+        # Automatically assign existing classroom activities to the new student
+        classroom_id = classroom['classroom_id']
+        assigned_activities_count = sync_classroom_activities_for_student(supabase, user['id'], classroom_id)
+        
+        if assigned_activities_count > 0:
+            print(f"Auto-assigned {assigned_activities_count} activities to new student {user['id']} in classroom {classroom_id}")
+        
         return {
             "message": "Successfully joined classroom",
             "classroom_id": classroom['classroom_id'],
-            "classroom_name": classroom['name']
+            "classroom_name": classroom['name'],
+            "activities_assigned": assigned_activities_count
         }
     except HTTPException:
         raise
@@ -202,15 +210,130 @@ async def get_student_classrooms(user: dict = Depends(get_current_student)):
         print(error_detail)
         raise HTTPException(status_code=500, detail=error_detail)
 
+def sync_classroom_activities_for_student(supabase, student_id: str, classroom_id: str) -> int:
+    """
+    Helper function to sync all classroom activities for a student.
+    Returns the number of activities assigned.
+    """
+    try:
+        # Get all activities for this classroom
+        # 1. Activities directly linked via classroom_id
+        direct_activities_result = supabase.table('learning_activities').select('activity_id, activity_type').eq('classroom_id', classroom_id).execute()
+        direct_activity_ids = []
+        activity_question_counts = {}
+        if direct_activities_result.data:
+            for act in direct_activities_result.data:
+                activity_id = act['activity_id']
+                direct_activity_ids.append(activity_id)
+                # Get question count (conversational activities don't have questions)
+                if act.get('activity_type') == 'conversational':
+                    activity_question_counts[activity_id] = None
+                else:
+                    questions_result = supabase.table('activity_questions').select('question_id').eq('activity_id', activity_id).execute()
+                    activity_question_counts[activity_id] = len(questions_result.data) if questions_result.data else 0
+        
+        # 2. Activities linked via documents (document-based activities)
+        docs_result = supabase.table('teacher_documents').select('document_id').eq('classroom_id', classroom_id).execute()
+        document_ids = [doc['document_id'] for doc in (docs_result.data or [])]
+        doc_activity_ids = []
+        if document_ids:
+            doc_activities_result = supabase.table('learning_activities').select('activity_id, activity_type').in_('document_id', document_ids).execute()
+            if doc_activities_result.data:
+                for act in doc_activities_result.data:
+                    if act['activity_id'] not in direct_activity_ids:  # Avoid duplicates
+                        activity_id = act['activity_id']
+                        doc_activity_ids.append(activity_id)
+                        # Get question count
+                        if act.get('activity_type') == 'conversational':
+                            activity_question_counts[activity_id] = None
+                        else:
+                            questions_result = supabase.table('activity_questions').select('question_id').eq('activity_id', activity_id).execute()
+                            activity_question_counts[activity_id] = len(questions_result.data) if questions_result.data else 0
+        
+        # 3. Activities linked via metadata/settings (fallback for conversational activities)
+        all_activities_result = supabase.table('learning_activities').select('activity_id, metadata, settings, activity_type').execute()
+        metadata_activity_ids = []
+        if all_activities_result.data:
+            for act in all_activities_result.data:
+                metadata = act.get('metadata') or act.get('settings') or {}
+                if metadata.get('classroom_id') == classroom_id:
+                    if act['activity_id'] not in direct_activity_ids and act['activity_id'] not in doc_activity_ids:
+                        activity_id = act['activity_id']
+                        metadata_activity_ids.append(activity_id)
+                        # Get question count if conversational (usually 0)
+                        if act.get('activity_type') == 'conversational' or act.get('metadata', {}).get('conversational') or act.get('settings', {}).get('conversational'):
+                            activity_question_counts[activity_id] = None
+                        else:
+                            questions_result = supabase.table('activity_questions').select('question_id').eq('activity_id', activity_id).execute()
+                            activity_question_counts[activity_id] = len(questions_result.data) if questions_result.data else 0
+        
+        # Combine all activity IDs
+        all_activity_ids = list(set(direct_activity_ids + doc_activity_ids + metadata_activity_ids))
+        
+        # Get document_id for document-based activities
+        doc_activities_with_docs = {}
+        if document_ids:
+            doc_acts_result = supabase.table('learning_activities').select('activity_id, document_id').in_('document_id', document_ids).execute()
+            if doc_acts_result.data:
+                for act in doc_acts_result.data:
+                    doc_activities_with_docs[act['activity_id']] = act.get('document_id')
+        
+        # Assign activities to the student
+        assignments = []
+        for activity_id in all_activity_ids:
+            # Check if already assigned
+            existing = supabase.table('student_activities').select('student_activity_id').eq('activity_id', activity_id).eq('student_id', student_id).execute()
+            
+            if not existing.data or len(existing.data) == 0:
+                assignment_data = {
+                    'activity_id': activity_id,
+                    'student_id': student_id,
+                    'status': 'assigned',
+                    'total_questions': activity_question_counts.get(activity_id),
+                    'responses': {}
+                }
+                # Add document_id if this is a document-based activity
+                if activity_id in doc_activities_with_docs:
+                    assignment_data['document_id'] = doc_activities_with_docs[activity_id]
+                
+                assignments.append(assignment_data)
+        
+        # Insert all assignments
+        if assignments:
+            assign_result = supabase.table('student_activities').insert(assignments).execute()
+            return len(assign_result.data) if assign_result.data else 0
+        
+        return 0
+    except Exception as e:
+        import traceback
+        print(f"Error syncing activities for student {student_id} in classroom {classroom_id}: {e}")
+        print(traceback.format_exc())
+        return 0
+
 @router.get("/activities")
 async def get_student_activities(
     classroom_id: Optional[str] = None,
     status: Optional[str] = None,
     user: dict = Depends(get_current_student)
 ):
-    """Get activities assigned to the student."""
+    """Get activities assigned to the student. Automatically syncs missing activities for existing students."""
     try:
         supabase = get_supabase_client()
+        
+        # If classroom_id is provided, sync activities for this student in this classroom
+        # This ensures existing students get activities they're missing
+        if classroom_id:
+            try:
+                # Check if student is enrolled in this classroom
+                enrollment_check = supabase.table('student_enrollments').select('enrollment_id').eq('classroom_id', classroom_id).eq('student_id', user['id']).execute()
+                if enrollment_check.data:
+                    # Sync activities for this classroom
+                    synced_count = sync_classroom_activities_for_student(supabase, user['id'], classroom_id)
+                    if synced_count > 0:
+                        print(f"Auto-synced {synced_count} missing activities for student {user['id']} in classroom {classroom_id}")
+            except Exception as sync_error:
+                # Log but don't fail - continue to fetch activities
+                print(f"Warning: Failed to sync activities: {sync_error}")
         
         # Build query with proper joins
         query = supabase.table('student_activities').select(
@@ -830,29 +953,152 @@ async def get_activity_introduction(
             raise HTTPException(status_code=404, detail="Activity not found")
         
         activity = activity_result.data
+        
+        # Check both metadata and settings for activity details
         metadata = activity.get('metadata', {})
-        topic = metadata.get('topic', activity.get('title', 'this topic'))
-        teaching_style = metadata.get('teaching_style', 'guided')
+        settings = activity.get('settings', {})
+        
+        # Merge metadata and settings (settings takes precedence if both exist)
+        activity_info = {**metadata, **settings}
+        
+        # Get activity details from various possible locations
+        # Check settings first (where conversational activities store data), then metadata, then direct fields
+        topic = settings.get('topic') or metadata.get('topic') or activity.get('title', 'this topic')
+        teaching_style = settings.get('teaching_style') or metadata.get('teaching_style') or 'guided'
+        
+        # Get description - prioritize the actual description field (what teacher wrote)
+        description = activity.get('description', '')
+        # If description is empty or is the default fallback, don't use it
+        default_description = f"Conversational learning about {topic}"
+        if not description or description.strip() == '' or description == default_description:
+            description = ''  # Don't use default/empty descriptions
+        
+        learning_objectives = activity.get('learning_objectives', []) or settings.get('learning_objectives', []) or metadata.get('learning_objectives', [])
+        difficulty = activity.get('difficulty', 'intermediate')
+        
+        # Build activity overview text with actual teacher-provided information
+        # Always include title - it's what the teacher specifically wrote
+        activity_title = activity.get('title', 'Math Activity')
+        activity_overview_parts = [f"**Activity Title:** {activity_title}"]
+        
+        # Add topic if it's different from title (topic is usually more specific)
+        if topic and topic.strip() and topic != activity_title:
+            activity_overview_parts.append(f"**Topic:** {topic}")
+        
+        # Only add description if it's meaningful (not empty and not the default)
+        if description and description.strip() and description != default_description:
+            activity_overview_parts.append(f"**Description:** {description}")
+        
+        # Add learning objectives if available
+        if learning_objectives:
+            if isinstance(learning_objectives, list) and len(learning_objectives) > 0:
+                objectives_text = ', '.join([str(obj) for obj in learning_objectives[:3]])  # Limit to first 3
+                activity_overview_parts.append(f"**Learning goals:** {objectives_text}")
+            elif isinstance(learning_objectives, str):
+                activity_overview_parts.append(f"**Learning goals:** {learning_objectives}")
+        
+        activity_overview = '\n'.join(activity_overview_parts)
+        
+        # Always ensure we have at least title and topic
+        if len(activity_overview_parts) <= 1:
+            activity_overview = f"**Activity Title:** {activity_title}\n**Topic:** {topic}"
+        
+        # Required starting phrase
+        required_start = "Hi! My name is MathMentor, your AI math tutor."
         
         # Generate introduction
-        prompt = f"""You are MathMentor, an AI math tutor. Create a welcoming introduction for a learning session about: {topic}
+        prompt = f"""You are MathMentor, an AI math tutor. Create a welcoming introduction for a learning session.
 
-Teaching Style: {teaching_style}
+TEACHER'S ACTIVITY INFORMATION (USE THIS EXACTLY - DO NOT MAKE UP DATA):
+{activity_overview}
+
+ADDITIONAL CONTEXT:
+- Teaching Style: {teaching_style}
+- Difficulty Level: {difficulty}
+- Main Topic: {topic}
+
+CRITICAL REQUIREMENT: You MUST start your introduction EXACTLY with these words: {required_start}
 
 Create an introduction that:
-1. Greets the student warmly
-2. Explains what you'll learn together
-3. Sets expectations for the conversation
-4. Makes them feel comfortable to ask questions
+1. MUST start with EXACTLY: {required_start}
+2. Then IMMEDIATELY mention the specific activity: "{activity_title}"
+3. Explain what this activity is about - use the Activity Title and Topic from above
+4. If there's a description, briefly summarize what the teacher wants students to learn
+5. Mention that you'll help them learn about {topic} using {teaching_style} teaching style
+6. Set positive expectations and make them feel comfortable to ask questions
 
-Keep it friendly and inviting! Use $...$ for math notation if needed."""
+FORMAT REQUIREMENTS:
+- Start with: {required_start}
+- Do NOT use "Welcome" as the first word
+- Do NOT say "I'm your AI math tutor" without first saying "Hi! My name is MathMentor"
+- MUST mention the specific activity title: "{activity_title}"
+- MUST reference what the activity is about (use the Activity Title and Topic from above)
+- Do NOT use generic phrases like "master mathematical concepts through conversation"
+- Be SPECIFIC about what they'll learn (use the activity title and topic)
+- Keep it concise and welcoming (3-4 sentences)
+- Use $...$ for math notation if needed
+
+EXAMPLE OF GOOD INTRODUCTION:
+{required_start} Your teacher has planned this activity: "{activity_title}" to help you learn about {topic}. We'll explore [specific concepts from the title/topic] together, and I'll guide you through understanding [key aspects]. Feel free to ask questions anytime!
+
+Your response MUST begin with: {required_start} and MUST mention "{activity_title}" specifically."""
 
         generator = ResponseGenerator()
         introduction = generator.generate_response(
             prompt=prompt,
-            temperature=0.7,
-            max_tokens=300
+            temperature=0.5,  # Lower temperature for more consistent output
+            max_tokens=400
         )
+        
+        # Post-process to ensure it starts correctly and includes activity title
+        introduction = introduction.strip()
+        activity_title = activity.get('title', '')
+        
+        # Ensure it starts correctly
+        if not introduction.startswith("Hi! My name is MathMentor"):
+            # If it doesn't start correctly, clean it up
+            if introduction.lower().startswith("welcome"):
+                # Remove "Welcome" and any following newlines/spaces
+                introduction = introduction.replace("Welcome", "", 1).strip()
+                introduction = introduction.replace("I'm your", "", 1).strip()
+                introduction = introduction.replace("AI math tutor", "", 1).strip()
+                introduction = introduction.replace("I'm here", "", 1).strip()
+                # Clean up any double spaces or newlines
+                introduction = re.sub(r'\n+', ' ', introduction)
+                introduction = re.sub(r'\s+', ' ', introduction).strip()
+            
+            # Prepend the required start if not present
+            if not introduction.startswith("Hi! My name is MathMentor"):
+                introduction = f"{required_start} {introduction}"
+        
+        # Ensure activity title is mentioned (if it's not generic)
+        if activity_title and activity_title != "Math Activity" and activity_title.lower() not in introduction.lower():
+            # Check if it mentions generic phrases that should be replaced
+            generic_phrases = [
+                "master mathematical concepts through conversation",
+                "help you master mathematical concepts",
+                "learn mathematical concepts",
+                "this lesson to help you master"
+            ]
+            
+            has_generic = any(phrase in introduction.lower() for phrase in generic_phrases)
+            
+            if has_generic or activity_title.lower() not in introduction.lower():
+                # Insert activity title mention after the greeting
+                # Find where to insert it (after "your AI math tutor")
+                tutor_mention = "your AI math tutor"
+                if tutor_mention in introduction:
+                    parts = introduction.split(tutor_mention, 1)
+                    if len(parts) == 2:
+                        # Insert activity mention
+                        introduction = f"{parts[0]}{tutor_mention}. Your teacher has planned this activity: \"{activity_title}\" to help you learn about {topic}.{parts[1]}"
+                    else:
+                        # Fallback: add after required start
+                        introduction = f"{required_start} Your teacher has planned this activity: \"{activity_title}\" to help you learn about {topic}. {introduction.replace(required_start, '').strip()}"
+                else:
+                    # Fallback: add after required start
+                    intro_without_start = introduction.replace(required_start, '').strip()
+                    introduction = f"{required_start} Your teacher has planned this activity: \"{activity_title}\" to help you learn about {topic}. {intro_without_start}"
         
         return {"introduction": introduction}
     except HTTPException:

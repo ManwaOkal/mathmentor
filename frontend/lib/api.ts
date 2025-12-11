@@ -631,6 +631,29 @@ class ApiClient {
     return Array.isArray(result) ? result : (result?.activities || [])
   }
 
+  async syncClassroomActivities(classroomId: string, sessionToken?: string): Promise<any> {
+    const token = sessionToken || await this.getAuthToken()
+    if (!token) {
+      throw new Error('No authentication token available. Please log in again.')
+    }
+
+    const url = `${this.baseUrl}/api/teacher/classrooms/${classroomId}/sync-activities`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }))
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
+  }
+
   async getActivityQuestions(activityId: string, sessionToken?: string): Promise<any> {
     const token = sessionToken || await this.getAuthToken()
     if (!token) {

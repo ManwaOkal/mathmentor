@@ -10,13 +10,18 @@ import TeacherFineTuning from '@/components/teacher/TeacherFineTuning'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth/useAuth'
 import { UserRole } from '@/lib/auth/types'
+import { api } from '@/lib/api'
+import { RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 
 function TeacherPageContent() {
   const { activeClassroom, activeSection } = useTeacherLayout()
+  const { session } = useAuth()
   const [showPromptActivityCreation, setShowPromptActivityCreation] = useState(false)
   const [showActivityAssignment, setShowActivityAssignment] = useState(false)
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const handleActivityCreated = () => {
     setShowPromptActivityCreation(false)
@@ -33,6 +38,32 @@ function TeacherPageContent() {
     setShowActivityAssignment(false)
     setSelectedActivityId(null)
     setRefreshKey(prev => prev + 1) // Trigger refresh
+  }
+
+  const handleSyncActivities = async () => {
+    if (!activeClassroom || !session?.access_token) return
+    
+    setSyncing(true)
+    setSyncMessage(null)
+    
+    try {
+      const result = await api.syncClassroomActivities(activeClassroom.classroom_id, session.access_token)
+      setSyncMessage({
+        type: 'success',
+        text: `Successfully synced ${result.synced_count || 0} activities to ${result.students_processed || 0} student(s)`
+      })
+      // Clear message after 5 seconds
+      setTimeout(() => setSyncMessage(null), 5000)
+    } catch (error: any) {
+      setSyncMessage({
+        type: 'error',
+        text: error?.message || 'Failed to sync activities. Please try again.'
+      })
+      // Clear message after 5 seconds
+      setTimeout(() => setSyncMessage(null), 5000)
+    } finally {
+      setSyncing(false)
+    }
   }
 
   if (!activeClassroom) {
@@ -53,14 +84,44 @@ function TeacherPageContent() {
               <h2 className="text-2xl sm:text-3xl font-light text-slate-900 tracking-tight mb-1">Activities</h2>
               <p className="text-xs sm:text-sm text-slate-500 font-light">Manage and organize your learning activities</p>
             </div>
-            <button
-              onClick={() => setShowPromptActivityCreation(true)}
-              className="self-start sm:self-auto px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center gap-1.5 sm:gap-2 shadow-sm"
-            >
-              <span className="text-slate-600">+</span>
-              <span>Create Activity</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <button
+                onClick={handleSyncActivities}
+                disabled={syncing}
+                className="self-start sm:self-auto px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center gap-1.5 sm:gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${syncing ? 'animate-spin' : ''}`} />
+                <span>{syncing ? 'Syncing...' : 'Sync Activities'}</span>
+              </button>
+              <button
+                onClick={() => setShowPromptActivityCreation(true)}
+                className="self-start sm:self-auto px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center gap-1.5 sm:gap-2 shadow-sm"
+              >
+                <span className="text-slate-600">+</span>
+                <span>Create Activity</span>
+              </button>
+            </div>
           </div>
+          
+          {/* Sync Message */}
+          {syncMessage && (
+            <div className={`mb-4 p-3 sm:p-4 rounded-lg flex items-start gap-2 sm:gap-3 ${
+              syncMessage.type === 'success' 
+                ? 'bg-green-50 border border-green-200' 
+                : 'bg-red-50 border border-red-200'
+            }`}>
+              {syncMessage.type === 'success' ? (
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              )}
+              <p className={`text-xs sm:text-sm ${
+                syncMessage.type === 'success' ? 'text-green-800' : 'text-red-800'
+              }`}>
+                {syncMessage.text}
+              </p>
+            </div>
+          )}
           
           {/* Prompt Activity Creation */}
           {showPromptActivityCreation && (

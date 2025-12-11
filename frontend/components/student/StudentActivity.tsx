@@ -149,14 +149,29 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
         
         // Get activity introduction and automatically start teaching
         try {
-          const introData = await api.getActivityIntroduction(data.activity.activity_id)
-          const introMessage: Message = {
-            role: 'assistant',
-            content: introData || generateWelcomeMessage(),
-            timestamp: new Date(),
-            id: 'intro'
+          const introResponse = await api.getActivityIntroduction(data.activity.activity_id)
+          // Handle both string response and object response
+          const introData = typeof introResponse === 'string' ? introResponse : introResponse?.introduction || introResponse
+          
+          // Ensure we have valid introduction data
+          if (introData && introData.trim() && !introData.includes('Welcome\n\n\n\nI\'m your')) {
+            const introMessage: Message = {
+              role: 'assistant',
+              content: introData,
+              timestamp: new Date(),
+              id: 'intro'
+            }
+            setMessages([introMessage])
+          } else {
+            // If introduction is invalid, use fallback
+            const introMessage: Message = {
+              role: 'assistant',
+              content: generateWelcomeMessage(),
+              timestamp: new Date(),
+              id: 'intro'
+            }
+            setMessages([introMessage])
           }
-          setMessages([introMessage])
           // Skip introduction phase and go straight to teach
           setCurrentPhase('teach')
         } catch (error) {
@@ -230,9 +245,7 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
   }, [input])
 
   const generateWelcomeMessage = () => {
-    return `# Welcome
-
-I'm your AI math tutor. I'm here to help you master mathematical concepts through conversation. Let's begin.`
+    return `Hi! My name is MathMentor, your AI math tutor. Your teacher has planned this lesson to help you master mathematical concepts through conversation. I'm here to help you succeed!`
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -421,7 +434,7 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50/30 to-white flex flex-col">
       {/* Navigation Bar - matching design */}
       <Navbar
         leftContent={
@@ -435,7 +448,7 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
             <div className="min-w-0">
               <h1 className="text-xs sm:text-sm font-semibold text-slate-900 truncate tracking-tight">{activityTitle}</h1>
               <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
-                <span className="text-xs text-slate-500 capitalize font-medium">{currentPhase.replace('_', ' ')}</span>
+                <span className="text-xs text-slate-500 capitalize font-medium px-2 py-0.5 bg-slate-100 rounded-md">{currentPhase.replace('_', ' ')}</span>
                 <span className="text-xs text-slate-300 hidden sm:inline">•</span>
                 <div className="flex items-center text-xs text-slate-500">
                   <Clock className="w-3 h-3 mr-1" />
@@ -481,10 +494,10 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
       />
 
       {/* Chat Container */}
-      <main className="flex-1 overflow-hidden">
-        <div className="max-w-3xl mx-auto h-full flex flex-col px-3 sm:px-4 md:px-6 lg:px-8">
+      <main className="flex-1 overflow-hidden bg-gradient-to-b from-white to-slate-50/50">
+        <div className="max-w-6xl mx-auto h-full flex flex-col px-3 sm:px-4 md:px-6 lg:px-8">
           {/* Messages Container */}
-          <div className="flex-1 overflow-y-auto py-8 sm:py-12 space-y-6 sm:space-y-10 pb-20 sm:pb-24 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+          <div className="flex-1 overflow-y-auto py-6 sm:py-8 md:py-10 space-y-4 sm:space-y-5 pb-24 sm:pb-28 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
             {messages.map((message, index) => {
               const isUser = message.role === 'user'
               const showAvatar = index === 0 || messages[index - 1]?.role !== message.role
@@ -492,51 +505,60 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
               return (
                 <div
                   key={message.id}
-                  className={`flex ${isUser ? 'justify-end' : 'justify-start'} items-start animate-in fade-in slide-in-from-bottom-2 duration-300`}
+                  className={`flex ${isUser ? 'justify-end' : 'justify-start'} items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300`}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   {!isUser && showAvatar && (
-                    <div className="mr-3 mt-0.5 flex-shrink-0">
-                      <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shadow-sm">
-                        <Brain className="w-4 h-4 text-slate-700" />
+                    <div className="flex-shrink-0 mt-1">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg ring-2 ring-blue-100">
+                        <Brain className="w-5 h-5 text-white" />
                       </div>
                     </div>
                   )}
                   
-                  <div className={`max-w-[85%] ${showAvatar ? '' : isUser ? 'mr-10' : 'ml-10'}`}>
+                  <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} ${showAvatar ? '' : isUser ? 'mr-12' : 'ml-12'} max-w-[95%] sm:max-w-[90%] md:max-w-[85%]`}>
                     {isUser ? (
-                      <div>
-                        <p className="text-slate-900 leading-relaxed text-[15px] whitespace-pre-wrap font-normal">{message.content}</p>
+                      <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl rounded-tr-sm px-4 sm:px-5 py-3 sm:py-3.5 shadow-lg shadow-blue-500/20">
+                        <p className="text-[15px] sm:text-base leading-relaxed whitespace-pre-wrap font-normal">{message.content}</p>
                       </div>
                     ) : (
-                      <div>
+                      <div className="w-full">
                         {showAvatar && (
-                          <div className="mb-2">
-                            <span className="text-xs font-semibold text-slate-700 tracking-wide">MathMentor</span>
+                          <div className="mb-1.5 ml-1">
+                            <span className="text-xs font-semibold text-slate-600 tracking-wide">MathMentor</span>
                           </div>
                         )}
-                        <div className="prose prose-sm max-w-none prose-headings:mt-0 prose-headings:mb-3 prose-headings:text-slate-900 prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-0 prose-p:leading-relaxed prose-p:text-slate-700 prose-p:text-[15px] prose-ul:my-2 prose-li:my-1 prose-li:text-slate-700 prose-li:leading-relaxed prose-strong:text-slate-900 prose-strong:font-semibold prose-code:text-slate-900 prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200">
-                          <MarkdownRenderer content={message.content} />
+                        <div className="bg-white rounded-2xl rounded-tl-sm px-4 sm:px-5 py-3 sm:py-3.5 shadow-md border border-slate-100">
+                          <div className="prose prose-sm max-w-none prose-headings:mt-0 prose-headings:mb-2 prose-headings:text-slate-900 prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-0 prose-p:leading-relaxed prose-p:text-slate-700 prose-p:text-[15px] sm:prose-p:text-base prose-ul:my-2 prose-li:my-1 prose-li:text-slate-700 prose-li:leading-relaxed prose-strong:text-slate-900 prose-strong:font-semibold prose-code:text-slate-900 prose-code:bg-blue-50 prose-code:px-2 prose-code:py-1 prose-code:rounded-md prose-code:text-sm prose-code:font-mono prose-code:border prose-code:border-blue-100 prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:rounded-lg">
+                            <MarkdownRenderer content={message.content} />
+                          </div>
                         </div>
                       </div>
                     )}
-                    
                   </div>
+                  
+                  {isUser && showAvatar && (
+                    <div className="flex-shrink-0 mt-1">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center shadow-lg ring-2 ring-slate-100">
+                        <span className="text-white text-sm font-semibold">S</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
 
             {sending && (
-              <div className="flex justify-start items-start animate-in fade-in duration-200">
-                <div className="mr-3 mt-0.5 flex-shrink-0">
-                  <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shadow-sm">
-                    <Brain className="w-4 h-4 text-slate-700" />
+              <div className="flex justify-start items-start gap-3 animate-in fade-in duration-200">
+                <div className="flex-shrink-0 mt-1">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg ring-2 ring-blue-100">
+                    <Brain className="w-5 h-5 text-white" />
                   </div>
                 </div>
-                <div>
+                <div className="bg-white rounded-2xl rounded-tl-sm px-4 sm:px-5 py-3 sm:py-3.5 shadow-md border border-slate-100">
                   <div className="flex items-center space-x-2.5">
-                    <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
-                    <span className="text-sm text-slate-600 font-medium">Processing...</span>
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    <span className="text-sm text-slate-600 font-medium">Thinking...</span>
                   </div>
                 </div>
               </div>
@@ -549,30 +571,43 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
 
       {/* Input Area */}
       {currentPhase !== 'complete' && (
-        <div className="sticky bottom-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <div className="max-w-3xl mx-auto">
-            <form onSubmit={handleSubmit} className="flex items-end gap-2 sm:gap-4">
-              <div className="flex-1 border-b-2 border-slate-300 focus-within:border-slate-900 transition-colors duration-200 pb-2 sm:pb-2.5">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder={
-                    currentPhase === 'teach' ? "Ask a question..." :
-                    currentPhase === 'practice' ? "Share your thinking..." :
-                    currentPhase === 'evaluate' ? "Show what you've learned..." :
-                    "Type your message..."
-                  }
-                  className="w-full border-none outline-none bg-transparent text-slate-900 placeholder-slate-400 text-sm sm:text-[15px] leading-relaxed"
-                  disabled={sending}
-                />
+        <div className="sticky bottom-0 bg-white/98 backdrop-blur-lg border-t border-slate-200/60 px-4 sm:px-6 md:px-8 lg:px-10 py-4 sm:py-5 shadow-[0_-8px_24px_-4px_rgba(0,0,0,0.08)]">
+          <div className="max-w-5xl mx-auto">
+            <form onSubmit={handleSubmit} className="flex items-center gap-3">
+              <div className="flex-1 relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl blur-sm opacity-50"></div>
+                <div className="relative bg-white border-2 border-slate-200 rounded-xl px-4 sm:px-5 py-3 sm:py-3.5 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all duration-200 shadow-sm">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={
+                      currentPhase === 'teach' ? "Ask a question..." :
+                      currentPhase === 'practice' ? "Share your thinking..." :
+                      currentPhase === 'evaluate' ? "Show what you've learned..." :
+                      "Type your message..."
+                    }
+                    className="w-full border-none outline-none bg-transparent text-slate-900 placeholder-slate-400 text-sm sm:text-[15px] leading-relaxed"
+                    disabled={sending}
+                  />
+                </div>
               </div>
               <button
                 type="submit"
                 disabled={!input.trim() || sending}
-                className="px-4 sm:px-5 py-2 sm:py-2.5 text-slate-900 hover:text-slate-700 disabled:text-slate-300 disabled:cursor-not-allowed transition-all duration-200 text-xs sm:text-sm font-medium flex-shrink-0 hover:bg-slate-50 rounded-lg -mb-0.5"
+                className="px-5 sm:px-6 py-3 sm:py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed transition-all duration-200 text-sm sm:text-base font-semibold flex-shrink-0 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 disabled:shadow-none flex items-center justify-center gap-2 min-w-[80px]"
               >
-                Send
+                {sending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="hidden sm:inline">Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span className="hidden sm:inline">Send</span>
+                  </>
+                )}
               </button>
             </form>
           </div>

@@ -1069,6 +1069,133 @@ class AssignActivityRequest(BaseModel):
     activity_id: str
     student_ids: List[str]
 
+@router.post("/classrooms/{classroom_id}/sync-activities")
+async def sync_classroom_activities(
+    classroom_id: str,
+    user: dict = Depends(get_current_teacher)
+):
+    """Sync all classroom activities to all enrolled students. Useful for existing students who joined before auto-assignment was implemented."""
+    try:
+        supabase = get_supabase_client()
+        
+        # Verify classroom belongs to teacher
+        classroom_result = supabase.table('classrooms').select('*').eq('classroom_id', classroom_id).eq('teacher_id', user['id']).single().execute()
+        
+        if not classroom_result.data:
+            raise HTTPException(status_code=404, detail="Classroom not found")
+        
+        # Get all students in the classroom
+        enrollments_result = supabase.table('student_enrollments').select('student_id').eq('classroom_id', classroom_id).execute()
+        
+        if not enrollments_result.data:
+            return {
+                "message": "No students found in classroom",
+                "synced_count": 0,
+                "students_processed": 0
+            }
+        
+        student_ids = [e['student_id'] for e in enrollments_result.data]
+        
+        # Get all activities for this classroom (same logic as in student router)
+        # 1. Activities directly linked via classroom_id
+        direct_activities_result = supabase.table('learning_activities').select('activity_id, activity_type').eq('classroom_id', classroom_id).execute()
+        direct_activity_ids = []
+        activity_question_counts = {}
+        if direct_activities_result.data:
+            for act in direct_activities_result.data:
+                activity_id = act['activity_id']
+                direct_activity_ids.append(activity_id)
+                if act.get('activity_type') == 'conversational':
+                    activity_question_counts[activity_id] = None
+                else:
+                    questions_result = supabase.table('activity_questions').select('question_id').eq('activity_id', activity_id).execute()
+                    activity_question_counts[activity_id] = len(questions_result.data) if questions_result.data else 0
+        
+        # 2. Activities linked via documents
+        docs_result = supabase.table('teacher_documents').select('document_id').eq('classroom_id', classroom_id).execute()
+        document_ids = [doc['document_id'] for doc in (docs_result.data or [])]
+        doc_activity_ids = []
+        if document_ids:
+            doc_activities_result = supabase.table('learning_activities').select('activity_id, activity_type').in_('document_id', document_ids).execute()
+            if doc_activities_result.data:
+                for act in doc_activities_result.data:
+                    if act['activity_id'] not in direct_activity_ids:
+                        activity_id = act['activity_id']
+                        doc_activity_ids.append(activity_id)
+                        if act.get('activity_type') == 'conversational':
+                            activity_question_counts[activity_id] = None
+                        else:
+                            questions_result = supabase.table('activity_questions').select('question_id').eq('activity_id', activity_id).execute()
+                            activity_question_counts[activity_id] = len(questions_result.data) if questions_result.data else 0
+        
+        # 3. Activities linked via metadata/settings
+        all_activities_result = supabase.table('learning_activities').select('activity_id, metadata, settings, activity_type').execute()
+        metadata_activity_ids = []
+        if all_activities_result.data:
+            for act in all_activities_result.data:
+                metadata = act.get('metadata') or act.get('settings') or {}
+                if metadata.get('classroom_id') == classroom_id:
+                    if act['activity_id'] not in direct_activity_ids and act['activity_id'] not in doc_activity_ids:
+                        activity_id = act['activity_id']
+                        metadata_activity_ids.append(activity_id)
+                        if act.get('activity_type') == 'conversational' or act.get('metadata', {}).get('conversational') or act.get('settings', {}).get('conversational'):
+                            activity_question_counts[activity_id] = None
+                        else:
+                            questions_result = supabase.table('activity_questions').select('question_id').eq('activity_id', activity_id).execute()
+                            activity_question_counts[activity_id] = len(questions_result.data) if questions_result.data else 0
+        
+        all_activity_ids = list(set(direct_activity_ids + doc_activity_ids + metadata_activity_ids))
+        
+        # Get document_id for document-based activities
+        doc_activities_with_docs = {}
+        if document_ids:
+            doc_acts_result = supabase.table('learning_activities').select('activity_id, document_id').in_('document_id', document_ids).execute()
+            if doc_acts_result.data:
+                for act in doc_acts_result.data:
+                    doc_activities_with_docs[act['activity_id']] = act.get('document_id')
+        
+        # Sync activities for all students
+        total_synced = 0
+        students_processed = 0
+        
+        for student_id in student_ids:
+            try:
+                assignments = []
+                for activity_id in all_activity_ids:
+                    existing = supabase.table('student_activities').select('student_activity_id').eq('activity_id', activity_id).eq('student_id', student_id).execute()
+                    
+                    if not existing.data or len(existing.data) == 0:
+                        assignment_data = {
+                            'activity_id': activity_id,
+                            'student_id': student_id,
+                            'status': 'assigned',
+                            'total_questions': activity_question_counts.get(activity_id),
+                            'responses': {}
+                        }
+                        if activity_id in doc_activities_with_docs:
+                            assignment_data['document_id'] = doc_activities_with_docs[activity_id]
+                        assignments.append(assignment_data)
+                
+                if assignments:
+                    assign_result = supabase.table('student_activities').insert(assignments).execute()
+                    synced_count = len(assign_result.data) if assign_result.data else 0
+                    total_synced += synced_count
+                students_processed += 1
+            except Exception as e:
+                print(f"Warning: Failed to sync activities for student {student_id}: {e}")
+                continue
+        
+        return {
+            "message": f"Synced activities for {students_processed} students",
+            "synced_count": total_synced,
+            "students_processed": students_processed,
+            "total_students": len(student_ids)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/activities/assign")
 async def assign_activity(
     request: AssignActivityRequest,
