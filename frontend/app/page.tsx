@@ -120,7 +120,7 @@ function HomeContent() {
       />
 
       {/* Hero Section */}
-      <section className="relative pt-8 sm:pt-12 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white">
+      <section className="relative pt-16 sm:pt-20 pb-20 sm:pb-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             {/* Left: Content */}
@@ -160,94 +160,38 @@ function HomeContent() {
 
             {/* Right: Chat Interface Image */}
             <div className="relative order-1 lg:order-2 w-full flex items-center justify-center">
-              <div className="relative w-full max-w-lg lg:max-w-2xl mx-auto">
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                  <Image
-                    src="/chat_intereface.png"
-                    alt="AI Tutor Chat Interface - Faster Learning, 24/7 Available, 100% Personalized, Infinite Patience, Always ready to help"
-                    width={800}
-                    height={1000}
-                    className="w-full h-auto"
-                    priority
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 50vw"
-                  />
-                </div>
+              <div className="relative w-full max-w-2xl mx-auto rounded-2xl overflow-hidden shadow-2xl">
+                <Image
+                  src="/chat_intereface.png"
+                  alt="AI Tutor Chat Interface - Faster Learning, 24/7 Available, 100% Personalized, Infinite Patience, Always ready to help"
+                  width={800}
+                  height={1000}
+                  className="w-full h-auto"
+                  priority
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 50vw"
+                />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Schools Section - Compact */}
-      <section className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100">
+      {/* Features Section */}
+      <section id="features" className="py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">
-              Trusted by Schools Across Kenya
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-            <div className="text-center py-3">
-              <h4 className="font-semibold text-slate-900 text-xs sm:text-sm mb-1">Chavakali High School</h4>
-              <p className="text-xs text-slate-500">Vihiga</p>
-            </div>
-            <div className="text-center py-3">
-              <h4 className="font-semibold text-slate-900 text-xs sm:text-sm mb-1">Darajambili Secondary</h4>
-              <p className="text-xs text-slate-500">Kisii</p>
-            </div>
-            <div className="text-center py-3">
-              <h4 className="font-semibold text-slate-900 text-xs sm:text-sm mb-1">St. Benedicts Academy</h4>
-              <p className="text-xs text-slate-500">Nairobi</p>
-            </div>
-            <div className="text-center py-3">
-              <h4 className="font-semibold text-slate-900 text-xs sm:text-sm mb-1">Hannington Academy</h4>
-              <p className="text-xs text-slate-500">Oyugis</p>
-            </div>
-            <div className="text-center py-3">
-              <h4 className="font-semibold text-slate-900 text-xs sm:text-sm mb-1">Nyansiongo High</h4>
-              <p className="text-xs text-slate-500">Kisii</p>
-            </div>
-            <div className="text-center py-3">
-              <h4 className="font-semibold text-slate-900 text-xs sm:text-sm mb-1">Agoro Sare High</h4>
-              <p className="text-xs text-slate-500">Homabay</p>
-            </div>
-            <div className="text-center py-3">
-              <h4 className="font-semibold text-slate-900 text-xs sm:text-sm mb-1">Kisumu Day High</h4>
-              <p className="text-xs text-slate-500">Kisumu</p>
-            </div>
-            <div className="text-center py-3">
-              <h4 className="font-semibold text-slate-900 text-xs sm:text-sm mb-1">Kisii High School</h4>
-              <p className="text-xs text-slate-500">Kisii</p>
-            </div>
-            <div className="text-center py-3">
-              <h4 className="font-semibold text-slate-900 text-xs sm:text-sm mb-1">Clanne Junior High</h4>
-              <p className="text-xs text-slate-500">Busia</p>
-            </div>
-            <div className="text-center py-3">
-              <h4 className="font-semibold text-slate-900 text-xs sm:text-sm mb-1">Zigma Junior Secondary</h4>
-              <p className="text-xs text-slate-500">Busia</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section - Borderless */}
-      <section id="features" className="py-8 sm:py-12 px-4 sm:px-6 lg:px-8 bg-slate-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-6 sm:mb-8">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 mb-2 sm:mb-3">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 mb-2 sm:mb-3 px-4">
               Powerful AI Tools to Supercharge Learning
             </h2>
-            <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto px-4">
               Everything you need to create engaging, personalized math learning experiences
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
             {/* Feature 1 */}
-            <div className="p-4 sm:p-5 rounded-lg hover:bg-white hover:shadow-md transition-all">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3">
+            <div className="p-5 sm:p-6 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                 <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Conversational Learning</h3>
@@ -257,8 +201,8 @@ function HomeContent() {
             </div>
 
             {/* Feature 2 */}
-            <div className="p-4 sm:p-5 rounded-lg hover:bg-white hover:shadow-md transition-all">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3">
+            <div className="p-5 sm:p-6 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                 <Target className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Fine-Tuned Teaching</h3>
@@ -268,30 +212,8 @@ function HomeContent() {
             </div>
 
             {/* Feature 3 */}
-            <div className="p-4 sm:p-5 rounded-lg hover:bg-white hover:shadow-md transition-all">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3">
-                <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Advanced LaTeX Rendering</h3>
-              <p className="text-sm sm:text-base text-slate-600">
-                Beautiful mathematical notation with proper LaTeX formatting for clear explanations
-              </p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="p-4 sm:p-5 rounded-lg hover:bg-white hover:shadow-md transition-all">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3">
-                <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Progress Analytics</h3>
-              <p className="text-sm sm:text-base text-slate-600">
-                Track student progress and identify learning gaps with detailed analytics
-              </p>
-            </div>
-
-            {/* Feature 5 */}
-            <div className="p-4 sm:p-5 rounded-lg hover:bg-white hover:shadow-md transition-all">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3">
+            <div className="p-5 sm:p-6 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
                 <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Instant Feedback</h3>
@@ -300,14 +222,14 @@ function HomeContent() {
               </p>
             </div>
 
-            {/* Feature 6 */}
-            <div className="p-4 sm:p-5 rounded-lg hover:bg-white hover:shadow-md transition-all">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3">
-                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
+            {/* Feature 4 */}
+            <div className="p-5 sm:p-6 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
+                <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
               </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Classroom Management</h3>
+              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Progress Analytics</h3>
               <p className="text-sm sm:text-base text-slate-600">
-                Organize students, assign activities, and manage multiple classrooms effortlessly
+                Track student progress and identify learning gaps with detailed analytics
               </p>
             </div>
           </div>
@@ -315,53 +237,53 @@ function HomeContent() {
       </section>
 
       {/* How It Works Section */}
-      <section id="how-it-works" className="py-8 sm:py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 border-t border-slate-100">
+      <section id="how-it-works" className="py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-6 sm:mb-8">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 mb-2 sm:mb-3">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 mb-2 sm:mb-3 px-4">
               How It Works
             </h2>
-            <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto px-4">
               Simple, intuitive workflow for both teachers and students
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             {/* Step 1 */}
-            <div className="text-center">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-900 text-white rounded-full flex items-center justify-center text-lg sm:text-xl font-bold mx-auto mb-3 sm:mb-4">
+            <div className="text-center px-4">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-900 text-white rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold mx-auto mb-4 sm:mb-6">
                 1
               </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Create or Join</h3>
+              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2 sm:mb-3">Create or Join</h3>
               <p className="text-sm sm:text-base text-slate-600">
                 Teachers create classrooms and activities. Students join using a simple code.
               </p>
             </div>
 
             {/* Step 2 */}
-            <div className="text-center">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-900 text-white rounded-full flex items-center justify-center text-lg sm:text-xl font-bold mx-auto mb-3 sm:mb-4">
+            <div className="text-center px-4">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-900 text-white rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold mx-auto mb-4 sm:mb-6">
                 2
               </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Start Learning</h3>
+              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2 sm:mb-3">Start Learning</h3>
               <p className="text-sm sm:text-base text-slate-600">
                 Students engage in conversational learning with AI that adapts to their needs.
               </p>
             </div>
 
             {/* Step 3 */}
-            <div className="text-center">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-900 text-white rounded-full flex items-center justify-center text-lg sm:text-xl font-bold mx-auto mb-3 sm:mb-4">
+            <div className="text-center px-4">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-900 text-white rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold mx-auto mb-4 sm:mb-6">
                 3
               </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Track Progress</h3>
+              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2 sm:mb-3">Track Progress</h3>
               <p className="text-sm sm:text-base text-slate-600">
                 Monitor understanding, get insights, and improve teaching strategies.
               </p>
             </div>
           </div>
 
-          <div className="text-center mt-6">
+          <div className="text-center">
             <a
               href="/how-it-works"
               className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-medium text-sm sm:text-base min-h-[44px]"
@@ -374,7 +296,7 @@ function HomeContent() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-8 sm:py-12 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
+      <section className="py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 px-4">
             Ready to Transform Math Education?
