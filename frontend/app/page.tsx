@@ -2,6 +2,7 @@
 
 import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import Auth from '@/components/Auth'
 import Navbar from '@/components/Navbar'
 import { 
@@ -123,7 +124,7 @@ function HomeContent() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             {/* Left: Content */}
-            <div className="order-2 lg:order-1">
+            <div className="order-1 lg:order-1">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full text-xs font-medium text-slate-700 mb-4 sm:mb-6">
                 <Sparkles className="w-3 h-3" />
                 <span>AI-Powered Math Tutoring</span>
@@ -157,78 +158,22 @@ function HomeContent() {
               </div>
             </div>
 
-            {/* Right: Visual/Stats */}
-            <div className="relative order-1 lg:order-2">
-              <div className="bg-slate-900 rounded-2xl p-6 sm:p-8 shadow-2xl">
-                <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-                  <div className="text-center">
-                    <div className="text-3xl sm:text-4xl font-bold text-white mb-1 sm:mb-2">3x</div>
-                    <div className="text-xs sm:text-sm text-slate-300">Faster Learning</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl sm:text-4xl font-bold text-white mb-1 sm:mb-2">24/7</div>
-                    <div className="text-xs sm:text-sm text-slate-300">Available</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl sm:text-4xl font-bold text-white mb-1 sm:mb-2">100%</div>
-                    <div className="text-xs sm:text-sm text-slate-300">Personalized</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl sm:text-4xl font-bold text-white mb-1 sm:mb-2">∞</div>
-                    <div className="text-xs sm:text-sm text-slate-300">Patience</div>
-                  </div>
-                </div>
-                <div className="bg-white/10 rounded-lg p-4 sm:p-6 backdrop-blur-sm">
-                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-white font-medium text-sm sm:text-base">AI Tutor</div>
-                      <div className="text-xs sm:text-sm text-slate-300 truncate">Always ready to help</div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                      <div className="h-full bg-white w-3/4"></div>
-                    </div>
-                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                      <div className="h-full bg-white w-1/2"></div>
-                    </div>
-                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                      <div className="h-full bg-white w-5/6"></div>
-                    </div>
-                  </div>
-                </div>
+            {/* Right: Image */}
+            <div className="relative order-2 lg:order-2">
+              <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] rounded-2xl overflow-hidden shadow-2xl bg-slate-50 flex items-center justify-center">
+                <Image
+                  src="/sample_feedback.png"
+                  alt="MathMentor - AI-powered math tutoring platform"
+                  fill
+                  className="object-contain"
+                  priority
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
+                />
               </div>
             </div>
           </div>
         </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
-            <div className="text-center">
-              <div className="text-3xl sm:text-4xl md:text-5xl font-bold mb-1 sm:mb-2">10+</div>
-              <div className="text-xs sm:text-sm md:text-base text-slate-300 px-2">Schools Across Kenya</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl sm:text-4xl md:text-5xl font-bold mb-1 sm:mb-2">8,000+</div>
-              <div className="text-xs sm:text-sm md:text-base text-slate-300 px-2">Students Reached</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl sm:text-4xl md:text-5xl font-bold mb-1 sm:mb-2">$5K</div>
-              <div className="text-xs sm:text-sm md:text-base text-slate-300 px-2">KCB Bank Funding</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl sm:text-4xl md:text-5xl font-bold mb-1 sm:mb-2">1st</div>
-              <div className="text-xs sm:text-sm md:text-base text-slate-300 px-2">Hack4Impact Winner</div>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
 
       {/* Schools Section */}
       <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-white">
