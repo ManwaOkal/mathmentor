@@ -64,7 +64,7 @@ Remember from the materials: [specific quote or concept from materials]."
 - Use $ delimiters for ALL math expressions
 - ✅ CORRECT: $m = \frac{{y_2 - y_1}}{{x_2 - x_1}}$
 - ❌ WRONG: $m = $\frac{{y_2 - y_1}}${{x_2 - x_1}}$ (multiple $ signs)
-- Use LaTeX commands with single backslashes: \frac, \sqrt, \pm, etc.
+- Use LaTeX commands with single backslashes: \\frac, \\sqrt, \\pm, etc.
 
 After teaching, ask: "Are you ready to try some questions based on your teacher's materials?"
 

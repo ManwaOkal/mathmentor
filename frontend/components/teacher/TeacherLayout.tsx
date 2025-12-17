@@ -124,11 +124,11 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       // Show user-friendly error message
       if (error instanceof Error) {
         if (error.message.includes('timeout') || error.message.includes('Request timeout')) {
-          setError('Request timed out. Please check if the backend server is running at http://localhost:8000')
+          setError('Request timed out. Please try again or contact support if the issue persists.')
         } else if (error.message.includes('401') || error.message.includes('Authentication') || error.message.includes('Invalid or expired') || error.message.includes('No authentication token')) {
           setError('Authentication failed. Please log out and log in again.')
         } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-          setError('Cannot connect to backend server. Make sure it\'s running at http://localhost:8000')
+          setError('Cannot connect to backend server. Please check your connection and try again.')
         } else {
           setError(`Failed to load classrooms: ${error.message}`)
         }

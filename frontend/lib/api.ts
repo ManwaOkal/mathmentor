@@ -19,7 +19,8 @@ class ApiClient {
   private pendingRequests: Map<string, Promise<any>> = new Map()
 
   constructor() {
-    this.baseUrl = API_URL
+    // Normalize baseUrl: remove trailing slash to prevent double slashes
+    this.baseUrl = API_URL.replace(/\/+$/, '')
     // Clean cache every 10 minutes
     setInterval(() => this.cleanCache(), 10 * 60 * 1000)
   }

@@ -58,27 +58,44 @@ else:
         "https://mathmentor-szbw2.vercel.app",
     ]
 
-# Custom CORS handler to allow all Vercel deployments
-def is_origin_allowed(origin: str) -> bool:
-    """Check if origin is allowed, including Vercel deployments."""
-    if not origin:
-        return False
-    # Allow localhost for development
-    if origin.startswith("http://localhost"):
-        return True
-    # Allow all Vercel deployments
-    if origin.endswith(".vercel.app"):
-        return True
-    # Check against explicit list
-    return origin in allowed_origins
+# Get custom domain from environment variable (for regex pattern)
+custom_domain = os.getenv("CUSTOM_DOMAIN", "")
+custom_domain_www = os.getenv("CUSTOM_DOMAIN_WWW", "")
 
-# Use a more permissive CORS setup
+# Build regex pattern for allowed origins
+# Base pattern: localhost and Vercel deployments
+regex_parts = ["localhost", ".*\\.vercel\\.app"]
+
+# Add custom domains if provided
+if custom_domain:
+    # Remove protocol if present
+    domain = custom_domain.replace("https://", "").replace("http://", "").replace("www.", "")
+    regex_parts.append(domain.replace(".", "\\."))
+    
+if custom_domain_www:
+    domain_www = custom_domain_www.replace("https://", "").replace("http://", "")
+    regex_parts.append(domain_www.replace(".", "\\."))
+
+# Also add mathmentor.academy domains if not already included
+# This ensures the custom domain works even if env vars aren't set
+if "mathmentor\\.academy" not in "|".join(regex_parts):
+    regex_parts.append("mathmentor\\.academy")
+    regex_parts.append("www\\.mathmentor\\.academy")
+
+# Build final regex pattern
+origin_regex = r"https?://(" + "|".join(regex_parts) + r")(:\d+)?"
+
+# Use CORS middleware with dynamic origin support
+# FastAPI's CORSMiddleware checks both allow_origins and allow_origin_regex
+# An origin is allowed if it matches either the explicit list OR the regex pattern
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https?://(localhost|.*\.vercel\.app)(:\d+)?",
+    allow_origins=allowed_origins,  # Explicit origins from env var or defaults
+    allow_origin_regex=origin_regex,  # Regex pattern for Vercel deployments and custom domains
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],  # Explicitly include OPTIONS for preflight
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Initialize services lazily to handle missing env vars gracefully
