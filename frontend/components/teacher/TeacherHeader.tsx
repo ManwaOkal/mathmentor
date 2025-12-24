@@ -1,40 +1,26 @@
 'use client'
 
-import { useState } from 'react'
 import { Classroom } from '@/lib/auth/types'
-import { Share2, LogOut } from 'lucide-react'
+import { Home } from 'lucide-react'
 import Navbar from '@/components/Navbar'
-import { useAuth } from '@/lib/auth/useAuth'
+import Auth from '@/components/Auth'
 import { useRouter } from 'next/navigation'
 
 interface TeacherHeaderProps {
   classroom: Classroom | null
   activeSection?: 'activities' | 'analytics' | 'finetuning' | null
+  onHomeClick?: () => void
 }
 
-export function TeacherHeader({ classroom, activeSection }: TeacherHeaderProps) {
-  const { profile, signOut } = useAuth()
+export function TeacherHeader({ classroom, activeSection, onHomeClick }: TeacherHeaderProps) {
   const router = useRouter()
-  const [logoutLoading, setLogoutLoading] = useState(false)
 
-  const handleLogout = async () => {
-    if (logoutLoading) return
-    
-    try {
-      setLogoutLoading(true)
-      await signOut()
-      router.push('/?logged_out=true')
-    } catch (error) {
-      console.error('Logout error:', error)
-    } finally {
-      setLogoutLoading(false)
-    }
-  }
-  const copyJoinCode = () => {
-    if (classroom?.join_code) {
-      navigator.clipboard.writeText(classroom.join_code)
-      // TODO: Show toast notification
-      alert(`Join code copied: ${classroom.join_code}`)
+  const handleHomeClick = () => {
+    if (onHomeClick) {
+      onHomeClick()
+    } else {
+      // Default: go to teacher page root
+      router.push('/teacher')
     }
   }
 
@@ -51,49 +37,28 @@ export function TeacherHeader({ classroom, activeSection }: TeacherHeaderProps) 
   return (
     <>
       <Navbar
-        centerContent={
-          classroom ? (
-            <div className="text-center">
-              <div className="text-base font-semibold text-slate-900 truncate tracking-tight leading-tight">
-                {classroom.name}
-              </div>
-              {activeSection && (
-                <div className="text-xs font-light text-slate-500 uppercase tracking-wider mt-0.5">
-                  {getSectionTitle()}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-base font-semibold text-slate-900 tracking-tight">
-              Teacher Dashboard
-            </div>
-          )
-        }
-        rightContent={
+        leftContent={
           <button
-            onClick={handleLogout}
-            disabled={logoutLoading}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            onClick={handleHomeClick}
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all duration-200 flex-shrink-0 group"
           >
-            <LogOut className="w-4 h-4" />
-            <span>{logoutLoading ? 'Signing out...' : 'Sign out'}</span>
+            <Home className="w-4 h-4 transition-transform group-hover:scale-110" />
+            <span className="text-sm font-medium hidden sm:inline">Home</span>
           </button>
         }
+        centerContent={
+          classroom ? (
+            <div className="text-center px-2">
+              <div className="text-sm sm:text-base font-semibold text-slate-900 truncate tracking-tight leading-tight max-w-[140px] sm:max-w-none">
+                {classroom.name}
+              </div>
+            </div>
+          ) : null
+        }
+        rightContent={
+          <Auth />
+        }
       />
-      {classroom && (
-        <div className="border-b border-slate-200 bg-white px-4 sm:px-6 py-2 sm:py-2.5 flex-shrink-0">
-          <div className="flex items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
-            <span className="text-slate-500 font-light text-xs">Join Code:</span>
-            <button
-              onClick={copyJoinCode}
-              className="font-mono bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 px-2 sm:px-3 py-1 rounded text-xs flex items-center gap-1 sm:gap-1.5 transition-colors text-slate-700"
-            >
-              <span className="text-xs">{classroom.join_code}</span>
-              <Share2 className="w-3 h-3 text-slate-500 flex-shrink-0" />
-            </button>
-          </div>
-        </div>
-      )}
     </>
   )
 }

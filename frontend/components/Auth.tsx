@@ -205,46 +205,25 @@ export default function Auth() {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setDropdownOpen(!dropdownOpen)}
-          className="flex items-center gap-3 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors group opacity-90 hover:opacity-100"
+          className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors group opacity-90 hover:opacity-100"
         >
           {/* User info with integrated badge - reduced prominence */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-slate-500" />
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+              <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" />
             </div>
-            <div className="hidden sm:flex items-center gap-2">
-              <div className="flex flex-col items-start">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-slate-700 max-w-[100px] truncate">
-                    {profile.name}
-                  </span>
-                  <span className="px-1.5 py-0.5 text-[10px] font-medium bg-slate-100 text-slate-500 rounded uppercase tracking-wide opacity-75">
-                    {profile.role}
-                  </span>
-                </div>
-                <span className="text-xs text-slate-400 max-w-[140px] truncate">
-                  {profile.email}
-                </span>
-              </div>
-            </div>
-            <span className="sm:hidden text-sm font-medium text-slate-700 max-w-[80px] truncate">
+            <span className="hidden sm:inline text-sm font-medium text-slate-700 max-w-[100px] truncate">
               {profile.name}
             </span>
           </div>
-          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 transition-transform flex-shrink-0 ${dropdownOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {/* Dropdown menu */}
         {dropdownOpen && (
           <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
             <div className="px-4 py-3 border-b border-slate-100 sm:hidden">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-medium text-slate-900">{profile.name}</span>
-                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-slate-100 text-slate-600 rounded uppercase">
-                  {profile.role}
-                </span>
-              </div>
-              <span className="text-xs text-slate-500">{profile.email}</span>
+              <span className="text-sm font-medium text-slate-900">{profile.name}</span>
             </div>
             <button
               onClick={handleLogout}

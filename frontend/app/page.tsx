@@ -295,8 +295,8 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Schools Section */}
-      <section className="py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 bg-white">
+      {/* Partners Section */}
+      <section className="py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-3 sm:mb-4 px-4">
@@ -307,85 +307,69 @@ function HomeContent() {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-2">
-                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Chavakali High School</h3>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600">Vihiga</p>
-            </div>
+          {/* Marquee Container */}
+          <div className="relative overflow-hidden py-4">
+            {/* Gradient overlays for fade effect */}
+            <div className="absolute left-0 top-0 bottom-0 w-20 sm:w-32 bg-gradient-to-r from-slate-50 to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute right-0 top-0 bottom-0 w-20 sm:w-32 bg-gradient-to-l from-slate-50 to-transparent z-10 pointer-events-none"></div>
             
-            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-2">
-                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Darajambili Secondary School</h3>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600">Kisii</p>
-            </div>
-            
-            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-2">
-                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">St. Benedicts Mixed Academy</h3>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600">Nairobi</p>
-            </div>
-            
-            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-2">
-                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Hannington Academy</h3>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600">Oyugis</p>
-            </div>
-            
-            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-2">
-                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Nyansiongo High School</h3>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600">Kisii</p>
-            </div>
-            
-            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-2">
-                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Agoro Sare High School</h3>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600">Homabay</p>
-            </div>
-            
-            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-2">
-                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Kisumu Day High School</h3>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600">Kisumu</p>
-            </div>
-            
-            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-2">
-                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Kisii High School</h3>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600">Kisii</p>
-            </div>
-            
-            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-2">
-                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Clanne Junior High School</h3>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600">Busia</p>
-            </div>
-            
-            <div className="bg-slate-50 rounded-lg p-4 sm:p-6 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all">
-              <div className="flex items-center gap-2 mb-2">
-                <GraduationCap className="w-5 h-5 text-slate-700 flex-shrink-0" />
-                <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Zigma Junior Secondary School</h3>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600">Busia</p>
+            {/* Marquee Track */}
+            <div className="flex animate-marquee" style={{ width: 'fit-content' }}>
+              {/* Logo items array */}
+              {[
+                { src: '/logos/chavakali.jpeg', alt: 'Chavakali High School' },
+                { src: '/logos/chuluni.jpeg', alt: 'Chuluni' },
+                { src: '/logos/kaboyce.png', alt: 'Kaboyce' },
+                { src: '/logos/kagwa.png', alt: 'Kagwa' },
+                { src: '/logos/kisii.png', alt: 'Kisii High School' },
+                { src: '/logos/kivukoni.png', alt: 'Kivukoni' },
+                { src: '/logos/kyondoni.jpeg', alt: 'Kyondoni' },
+                { src: '/logos/nduru.jpeg', alt: 'Nduru' },
+                { src: '/logos/nkoma.png', alt: 'Nkoma' },
+                { src: '/logos/shikoti.png', alt: 'Shikoti' },
+              ].map((logo, idx) => (
+                <div
+                  key={`logo-${idx}`}
+                  className="flex items-center justify-center w-32 sm:w-40 h-20 sm:h-24 bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-slate-200 hover:shadow-md transition-shadow mx-4 sm:mx-6 flex-shrink-0"
+                >
+                  <Image
+                    src={logo.src}
+                    alt={logo.alt}
+                    width={120}
+                    height={80}
+                    className="max-w-full max-h-full object-contain"
+                    unoptimized
+                  />
+                </div>
+              ))}
+              
+              {/* Duplicate set for seamless loop */}
+              {[
+                { src: '/logos/chavakali.jpeg', alt: 'Chavakali High School' },
+                { src: '/logos/chuluni.jpeg', alt: 'Chuluni' },
+                { src: '/logos/kaboyce.png', alt: 'Kaboyce' },
+                { src: '/logos/kagwa.png', alt: 'Kagwa' },
+                { src: '/logos/kisii.png', alt: 'Kisii High School' },
+                { src: '/logos/kivukoni.png', alt: 'Kivukoni' },
+                { src: '/logos/kyondoni.jpeg', alt: 'Kyondoni' },
+                { src: '/logos/nduru.jpeg', alt: 'Nduru' },
+                { src: '/logos/nkoma.png', alt: 'Nkoma' },
+                { src: '/logos/shikoti.png', alt: 'Shikoti' },
+              ].map((logo, idx) => (
+                <div
+                  key={`logo-duplicate-${idx}`}
+                  className="flex items-center justify-center w-32 sm:w-40 h-20 sm:h-24 bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-slate-200 hover:shadow-md transition-shadow mx-4 sm:mx-6 flex-shrink-0"
+                >
+                  <Image
+                    src={logo.src}
+                    alt={logo.alt}
+                    width={120}
+                    height={80}
+                    className="max-w-full max-h-full object-contain"
+                    unoptimized
+                  />
+                </div>
+              ))}
             </div>
           </div>
         </div>

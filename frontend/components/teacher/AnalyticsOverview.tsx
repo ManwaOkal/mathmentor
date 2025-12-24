@@ -46,9 +46,25 @@ export function AnalyticsOverview({ classroomId }: AnalyticsOverviewProps) {
     if (!classroomId || !session?.access_token) return
     
     loadStats()
-    // Auto-refresh every 30 seconds to get updated student count (reduced frequency)
-    const interval = setInterval(loadStats, 30000)
-    return () => clearInterval(interval)
+    // Auto-refresh every 5 minutes to reduce server load (only when page is visible)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadStats()
+      }
+    }
+    
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        loadStats()
+      }
+    }, 300000) // 5 minutes
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [loadStats, classroomId, session?.access_token])
 
   if (loading) {

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Edit, Save, X, MessageSquare, Target, CheckCircle } from 'lucide-react'
+import { Plus, Trash2, Edit, Save, X, MessageSquare, Target, CheckCircle, User, Lightbulb, HelpCircle, Loader2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth/useAuth'
+import Toast from '@/components/Toast'
 
 interface TeachingExample {
   id: string
@@ -17,25 +18,71 @@ export default function TeacherFineTuning() {
   const { session } = useAuth()
   const [examples, setExamples] = useState<TeachingExample[]>([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [editingExample, setEditingExample] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
   const [newExample, setNewExample] = useState({
     assessment_criteria: '',
     teacher_input: '',
     desired_ai_response: ''
   })
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('')
+
+  const templates = {
+    'confused': 'Student understands the concept but is confused about the steps or process.',
+    'almost_correct': 'Student is on the right track but has a small misunderstanding or calculation error.',
+    'misconception': 'Student has a fundamental misconception about how the concept works.',
+    'guessing': 'Student is guessing or doesn\'t know where to start.'
+  }
+
+  // Cache key for teaching examples
+  const CACHE_KEY = 'teaching_examples_cache'
+  const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
   useEffect(() => {
     loadExamples()
   }, [])
 
-  const loadExamples = async () => {
+  const loadExamples = async (forceRefresh: boolean = false) => {
     setLoading(true)
     try {
       const sessionToken = session?.access_token
       if (!sessionToken) {
         throw new Error('Authentication required. Please log in again.')
       }
+
+      // Check cache first if not forcing refresh
+      if (!forceRefresh) {
+        try {
+          const cached = localStorage.getItem(CACHE_KEY)
+          if (cached) {
+            const cachedData = JSON.parse(cached)
+            const cacheAge = Date.now() - (cachedData.timestamp || 0)
+            if (cacheAge < CACHE_TTL) {
+              // Use cached data
+              const mappedExamples = (cachedData.examples || []).map((ex: any) => ({
+                id: ex.id || ex.teaching_example_id || ex.example_id || ex['id'],
+                assessment_criteria: ex.assessment_criteria || '',
+                teacher_input: ex.teacher_input || '',
+                desired_ai_response: ex.desired_ai_response || '',
+                created_at: ex.created_at || ''
+              }))
+              setExamples([...mappedExamples])
+              setLoading(false)
+              // Load fresh data in background
+              loadExamples(true)
+              return
+            }
+          }
+        } catch (e) {
+          console.error('Error reading cache:', e)
+          // Continue to fetch fresh data
+        }
+      }
+
+      // Fetch fresh data from API
       const data = await api.getTeachingExamples(sessionToken)
       const mappedExamples = (data || []).map((ex: any) => ({
         id: ex.id || ex.teaching_example_id || ex.example_id || ex['id'],
@@ -45,6 +92,16 @@ export default function TeacherFineTuning() {
         created_at: ex.created_at || ''
       }))
       setExamples([...mappedExamples])
+
+      // Update cache
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          examples: data || [],
+          timestamp: Date.now()
+        }))
+      } catch (e) {
+        console.error('Error saving cache:', e)
+      }
     } catch (error) {
       console.error('Error loading examples:', error)
     } finally {
@@ -52,12 +109,23 @@ export default function TeacherFineTuning() {
     }
   }
 
+  // Clear cache helper
+  const clearCache = () => {
+    try {
+      localStorage.removeItem(CACHE_KEY)
+    } catch (e) {
+      console.error('Error clearing cache:', e)
+    }
+  }
+
   const handleSaveExample = async () => {
     if (!newExample.assessment_criteria?.trim() || !newExample.teacher_input?.trim() || !newExample.desired_ai_response?.trim()) {
-      alert('Please fill in all required fields')
+      setToastMessage('Please fill in all required fields')
+      setShowToast(true)
       return
     }
 
+    setSaving(true)
     try {
       const sessionToken = session?.access_token
       if (!sessionToken) {
@@ -82,16 +150,22 @@ export default function TeacherFineTuning() {
         await api.createTeachingExample(exampleData, sessionToken)
       }
 
-      await loadExamples()
+      // Clear cache and reload examples
+      clearCache()
+      await loadExamples(true)
       setEditingExample(null)
       setShowAddForm(false)
       resetForm()
       
-      alert(editingExample ? 'Example updated!' : 'Example added!')
+      setToastMessage(editingExample ? 'Example updated successfully!' : 'Example added successfully!')
+      setShowToast(true)
     } catch (error: any) {
       console.error('Error saving example:', error)
       const errorMessage = error?.message || error?.detail || 'Failed to save example'
-      alert(`Failed to save example: ${errorMessage}`)
+      setToastMessage(`Failed to save example: ${errorMessage}`)
+      setShowToast(true)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -101,12 +175,22 @@ export default function TeacherFineTuning() {
       teacher_input: '',
       desired_ai_response: ''
     })
+    setSelectedTemplate('')
+  }
+
+  const handleTemplateSelect = (templateKey: string) => {
+    setSelectedTemplate(templateKey)
+    setNewExample({
+      ...newExample,
+      assessment_criteria: templates[templateKey as keyof typeof templates] || ''
+    })
   }
 
   const handleDeleteExample = async (id: string) => {
     const sessionToken = session?.access_token
     if (!sessionToken) {
-      alert('Authentication required. Please log in again.')
+      setToastMessage('Authentication required. Please log in again.')
+      setShowToast(true)
       return
     }
     if (!confirm('Are you sure you want to delete this teaching example?')) {
@@ -122,14 +206,18 @@ export default function TeacherFineTuning() {
       
       await api.deleteTeachingExample(id, sessionToken)
       
+      // Clear cache and reload
+      clearCache()
       setTimeout(async () => {
-        await loadExamples()
+        await loadExamples(true)
       }, 100)
     } catch (error: any) {
       console.error('Error deleting example:', error)
       const errorMessage = error?.message || error?.detail || 'Failed to delete example'
-      alert(`Failed to delete example: ${errorMessage}`)
-      await loadExamples()
+      setToastMessage(`Failed to delete example: ${errorMessage}`)
+      setShowToast(true)
+      clearCache()
+      await loadExamples(true)
     }
   }
 
@@ -160,84 +248,144 @@ export default function TeacherFineTuning() {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       {/* Header */}
-      <div className="mb-12">
-        <h1 className="text-3xl font-semibold text-slate-900 tracking-tight mb-2">
+      <div className="mb-8">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight mb-2">
           Fine-Tuning
         </h1>
-        <p className="text-sm text-slate-600 leading-relaxed">
-          Define how the AI should assess understanding and respond to student questions.
+        <p className="text-sm text-slate-600">
+          You're teaching the AI how to respond when students get stuck.
         </p>
       </div>
 
       {/* Add Example Form */}
       {showAddForm && (
-        <div className="mb-12">
+        <div className="mb-8 bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8">
           {/* Form Header */}
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
-              {editingExample ? 'Edit Teaching Example' : 'Define Teaching Behavior'}
-            </h2>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900 tracking-tight mb-1">
+                {editingExample ? 'Edit Teaching Example' : 'Share a Teaching Moment'}
+              </h2>
+              <p className="text-sm text-slate-600">
+                {editingExample ? 'Update your example below' : 'Each example shows one student situation and the best way to help them.'}
+              </p>
+            </div>
             <button
               onClick={() => {
                 setShowAddForm(false)
                 setEditingExample(null)
                 resetForm()
               }}
-              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
               aria-label="Close form"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 text-slate-400" />
             </button>
           </div>
 
-          {/* Form Sections */}
-          <div className="space-y-10">
-            {/* Section 1: Assessment Criteria */}
-            <section className="space-y-4">
-              <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
-                Assessment Criteria
-              </h3>
-              <textarea
-                value={newExample.assessment_criteria}
-                onChange={(e) => setNewExample({ ...newExample, assessment_criteria: e.target.value })}
-                placeholder="How to assess understanding..."
-                rows={3}
-                className="w-full px-3 py-3 text-sm border-b-2 border-slate-200 bg-transparent focus:outline-none focus:border-slate-900 transition-colors placeholder:text-slate-400 resize-none"
-              />
-            </section>
+          {/* Template Selector */}
+          {!editingExample && (
+            <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Quick Start (Optional)
+              </label>
+              <select
+                value={selectedTemplate}
+                onChange={(e) => handleTemplateSelect(e.target.value)}
+                disabled={saving}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-sm text-slate-900 cursor-pointer transition-all bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="">Choose a common situation...</option>
+                <option value="confused">Student is confused</option>
+                <option value="almost_correct">Student is almost correct</option>
+                <option value="misconception">Student has a misconception</option>
+                <option value="guessing">Student is guessing</option>
+              </select>
+            </div>
+          )}
 
-            {/* Section 2: Student Difficulty / Question */}
-            <section className="space-y-4">
-              <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
-                Student Difficulty / Question
-              </h3>
+          {/* Form Sections - Story Format */}
+          <div className="space-y-6">
+            {/* Step 1: The Student */}
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-semibold">
+                  1
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900">
+                    What did the student say?
+                  </label>
+                  <p className="text-xs text-slate-500 mt-0.5">Write it exactly how a student would say it.</p>
+                </div>
+              </div>
               <textarea
                 value={newExample.teacher_input}
                 onChange={(e) => setNewExample({ ...newExample, teacher_input: e.target.value })}
-                placeholder="What the student says or asks..."
-                rows={4}
-                className="w-full px-3 py-3 text-sm border-b-2 border-slate-200 bg-transparent focus:outline-none focus:border-slate-900 transition-colors placeholder:text-slate-400 resize-none"
+                placeholder="Why do we divide by 3 here? I don't get it."
+                rows={3}
+                disabled={saving}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-sm text-slate-900 placeholder:text-slate-400 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
-            </section>
+            </div>
 
-            {/* Section 3: Ideal Teaching Response */}
-            <section className="space-y-4">
-              <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
-                Ideal Teaching Response
-              </h3>
+            {/* Step 2: What's Going On */}
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-semibold">
+                  2
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900">
+                    What does this student understand or misunderstand?
+                  </label>
+                  <p className="text-xs text-slate-500 mt-0.5">Describe what you think is going on in the student's head.</p>
+                </div>
+              </div>
+              <textarea
+                value={newExample.assessment_criteria}
+                onChange={(e) => setNewExample({ ...newExample, assessment_criteria: e.target.value })}
+                placeholder="Student understands solving equations but doesn't know why inverse operations work."
+                rows={3}
+                disabled={saving}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-sm text-slate-900 placeholder:text-slate-400 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            {/* Step 3: How to Help */}
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-semibold">
+                  3
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-900">
+                    How should the AI explain it?
+                  </label>
+                  <p className="text-xs text-slate-500 mt-0.5">Write the kind of response you'd want to hear as a student.</p>
+                </div>
+              </div>
               <textarea
                 value={newExample.desired_ai_response}
                 onChange={(e) => setNewExample({ ...newExample, desired_ai_response: e.target.value })}
-                placeholder="How should the AI respond to teach effectively?"
-                rows={6}
-                className="w-full px-3 py-3 text-sm border-b-2 border-slate-200 bg-transparent focus:outline-none focus:border-slate-900 transition-colors placeholder:text-slate-400 resize-none"
+                placeholder="Explain using a balance analogy, step by step, and check understanding."
+                rows={5}
+                disabled={saving}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-sm text-slate-900 placeholder:text-slate-400 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
-            </section>
+            </div>
+
+            {/* Reassurance */}
+            <div className="pt-2 pb-4">
+              <p className="text-xs text-slate-500 italic">
+                💡 Don't worry about wording—examples can be short and informal. Just describe a moment from your classroom.
+              </p>
+            </div>
 
             {/* Actions */}
-            <div className="pt-6 border-t border-slate-200">
+            <div className="pt-4 border-t border-slate-200">
               <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <button
                   onClick={() => {
@@ -245,17 +393,27 @@ export default function TeacherFineTuning() {
                     setEditingExample(null)
                     resetForm()
                   }}
-                  className="px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200 hover:border-slate-300"
+                  disabled={saving}
+                  className="px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200 hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveExample}
-                  disabled={!newExample.assessment_criteria?.trim() || !newExample.teacher_input?.trim() || !newExample.desired_ai_response?.trim()}
-                  className="px-6 py-2 text-sm font-medium bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                  disabled={!newExample.assessment_criteria?.trim() || !newExample.teacher_input?.trim() || !newExample.desired_ai_response?.trim() || saving}
+                  className="px-6 py-2.5 text-sm font-medium bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>{editingExample ? 'Update' : 'Save'}</span>
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{editingExample ? 'Updating...' : 'Saving...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>{editingExample ? 'Update' : 'Save Example'}</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -265,36 +423,36 @@ export default function TeacherFineTuning() {
 
       {/* Examples List */}
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-4 mb-8">
-          <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Teaching Behaviors</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Your Teaching Examples</h2>
           {!showAddForm && (
             <button
               onClick={() => setShowAddForm(true)}
-              className="self-start sm:self-auto px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center gap-2 shadow-sm"
+              className="self-start sm:self-auto px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
             >
               <Plus className="w-4 h-4" />
-              <span>Add New Example</span>
+              <span>Share Another Example</span>
             </button>
           )}
         </div>
 
         {examples.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-slate-100 flex items-center justify-center">
-              <Target className="w-10 h-10 text-slate-400" />
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+              <MessageSquare className="w-8 h-8 text-slate-400" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">No teaching behaviors defined</h3>
-            <p className="text-sm text-slate-600 mb-8">Define how you want the AI to assess and respond to students</p>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">No examples yet</h3>
+            <p className="text-sm text-slate-600 mb-6">Share a moment from your classroom to teach the AI how to help students</p>
             <button
               onClick={() => setShowAddForm(true)}
               className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors shadow-sm hover:shadow-md"
             >
               <Plus className="w-4 h-4" />
-              <span>Add First Example</span>
+              <span>Share Your First Example</span>
             </button>
           </div>
         ) : (
-          <div className="space-y-0">
+          <div className="space-y-6">
             {examples.map((example, index) => {
               // Extract assessment criteria - handle both string and array formats
               const assessmentCriteria = Array.isArray(example.assessment_criteria) 
@@ -304,46 +462,23 @@ export default function TeacherFineTuning() {
               return (
                 <div 
                   key={example.id} 
-                  className={`py-8 ${index !== examples.length - 1 ? 'border-b border-slate-200' : ''} hover:bg-slate-50/50 transition-colors`}
+                  className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-                    <div className="flex-1 space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                          <div className="text-xs text-slate-500 mb-3 flex items-center font-medium uppercase tracking-wider">
-                            <Target className="w-3.5 h-3.5 mr-1.5" /> Assessment Criteria
-                          </div>
-                          <div className="bg-slate-50 p-3 rounded-md">
-                            <div className="text-sm text-slate-700 leading-relaxed">{assessmentCriteria || 'Not specified'}</div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="text-xs text-slate-500 mb-3 flex items-center font-medium uppercase tracking-wider">
-                            <MessageSquare className="w-3.5 h-3.5 mr-1.5" /> Student Difficulty / Question
-                          </div>
-                          <div className="bg-slate-50 p-3 rounded-md">
-                            <div className="text-sm text-slate-700 leading-relaxed">{example.teacher_input || 'Not specified'}</div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="text-xs text-slate-500 mb-3 flex items-center font-medium uppercase tracking-wider">
-                            <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Ideal Teaching Response
-                          </div>
-                          <div className="bg-slate-50 p-3 rounded-md">
-                            <div className="text-sm text-slate-700 leading-relaxed">{example.desired_ai_response || 'Not specified'}</div>
-                          </div>
-                        </div>
+                  {/* Card Header */}
+                  <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                        {index + 1}
                       </div>
+                      <span className="text-sm font-medium text-slate-700">Teaching Example</span>
                     </div>
-
-                    <div className="flex gap-3 lg:flex-col lg:ml-6">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleEditExample(example)}
-                        className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors"
+                        title="Edit example"
                       >
-                        Edit
+                        <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={(e) => {
@@ -351,10 +486,62 @@ export default function TeacherFineTuning() {
                           e.stopPropagation()
                           handleDeleteExample(example.id)
                         }}
-                        className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-white rounded-lg transition-colors"
+                        title="Delete example"
                       >
-                        Delete
+                        <Trash2 className="w-4 h-4" />
                       </button>
+                    </div>
+                  </div>
+
+                  {/* Card Content - Story Flow */}
+                  <div className="p-6 space-y-6">
+                    {/* Step 1: What the student said */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                          1
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-slate-500" />
+                          <h3 className="text-sm font-semibold text-slate-900">What the student said</h3>
+                        </div>
+                      </div>
+                      <div className="ml-8 pl-4 border-l-2 border-slate-200">
+                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{example.teacher_input || 'Not specified'}</p>
+                      </div>
+                    </div>
+
+                    {/* Step 2: What's going on */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                          2
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Lightbulb className="w-4 h-4 text-slate-500" />
+                          <h3 className="text-sm font-semibold text-slate-900">What's going on</h3>
+                        </div>
+                      </div>
+                      <div className="ml-8 pl-4 border-l-2 border-slate-200">
+                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{assessmentCriteria || 'Not specified'}</p>
+                      </div>
+                    </div>
+
+                    {/* Step 3: How to help */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                          3
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <HelpCircle className="w-4 h-4 text-slate-500" />
+                          <h3 className="text-sm font-semibold text-slate-900">How to help</h3>
+                        </div>
+                      </div>
+                      <div className="ml-8 pl-4 border-l-2 border-slate-200">
+                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{example.desired_ai_response || 'Not specified'}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -363,6 +550,13 @@ export default function TeacherFineTuning() {
           </div>
         )}
       </div>
+
+      {showToast && (
+        <Toast
+          message={toastMessage}
+          onClose={() => setShowToast(false)}
+        />
+      )}
     </div>
   )
 }

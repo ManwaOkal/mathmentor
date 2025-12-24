@@ -499,6 +499,29 @@ class ApiClient {
     return response.json()
   }
 
+  async getStudentAnalytics(classroomId: string, studentId: string, sessionToken?: string): Promise<any> {
+    const token = sessionToken || await this.getAuthToken()
+    if (!token) {
+      throw new Error('No authentication token available. Please log in again.')
+    }
+    
+    const url = `${this.baseUrl}/api/teacher/analytics/${classroomId}/student/${studentId}`
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }))
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
+  }
+
   async processDocumentIntelligently(documentId: string): Promise<any> {
     return this.request(`/api/teacher/documents/${documentId}/process-intelligent`, {
       method: 'POST',
@@ -688,9 +711,42 @@ class ApiClient {
     }, false)
   }
 
-  async deleteActivity(activityId: string, force: boolean = false): Promise<any> {
-    return this.request(`/api/teacher/activities/${activityId}?force=${force}`, {
+  async updateActivity(activityId: string, activityData: {
+    title: string
+    description?: string
+    activity_type: string
+    difficulty: string
+    settings?: any
+  }, sessionToken?: string): Promise<any> {
+    const token = sessionToken || await this.getAuthToken()
+    if (!token) {
+      throw new Error('Authentication required. Please log in again.')
+    }
+    
+    return this.request(`/api/teacher/activities/${activityId}`, {
+      method: 'PUT',
+      body: JSON.stringify(activityData),
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }, false)
+  }
+
+  async deleteActivity(activityId: string, force: boolean = false, sessionToken?: string): Promise<any> {
+    const token = sessionToken || await this.getAuthToken()
+    if (!token) {
+      throw new Error('Authentication required. Please log in again.')
+    }
+    
+    // Ensure force is properly converted to string 'true' or 'false' for query parameter
+    const forceParam = force ? 'true' : 'false'
+    console.log('deleteActivity called with force=', force, 'forceParam=', forceParam)
+    
+    return this.request(`/api/teacher/activities/${activityId}?force=${forceParam}`, {
       method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     }, false)
   }
 
@@ -1096,8 +1152,27 @@ class ApiClient {
     return typeof result === 'string' ? result : result.response || ''
   }
 
-  async getActivityIntroduction(activityId: string): Promise<string> {
-    const result = await this.request<{ introduction: string }>(`/api/student/activities/${activityId}/introduction`, {}, false)
+  async getActivityIntroduction(activityId: string, sessionToken?: string): Promise<string> {
+    const token = sessionToken || await this.getAuthToken()
+    if (!token) {
+      throw new Error('No authentication token available. Please log in again.')
+    }
+
+    const url = `${this.baseUrl}/api/student/activities/${activityId}/introduction`
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }))
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
     return result.introduction
   }
 

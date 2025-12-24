@@ -68,6 +68,21 @@ def fix_latex_formatting(text: str) -> str:
     # This should already be correct, but ensure it's properly formatted
     text = re.sub(pattern, r'$\frac{\1}{\2}$', text)
     
+    # Fix: \times without proper delimiters
+    # Example: 2\times2 matrix → $2\times2$ matrix
+    # Match patterns like: number\timesnumber, letter\timesletter, etc.
+    # Process in order: simple patterns first, then more complex
+    text = re.sub(r'(?<!\$)(\d+)\\times(\d+)', r'$\1\\times\2$', text)
+    text = re.sub(r'(?<!\$)([A-Za-z])\\times([A-Za-z])', r'$\1\\times\2$', text)
+    text = re.sub(r'(?<!\$)(\d+)\\times([A-Za-z])', r'$\1\\times\2$', text)
+    text = re.sub(r'(?<!\$)([A-Za-z])\\times(\d+)', r'$\1\\times\2$', text)
+    # Catch \times in context like "2\times2 matrix" or "A\times B" - wrap just the math part
+    text = re.sub(r'(?<!\$)([^\s$]+)\\times([^\s$]+)(?=\s|$|\.|,|;|:|\))', r'$\1\\times\2$', text)
+    
+    # Fix: \cdot without proper delimiters
+    text = re.sub(r'(?<!\$)(\d+)\\cdot(\d+)', r'$\1\\cdot\2$', text)
+    text = re.sub(r'(?<!\$)([A-Za-z])\\cdot([A-Za-z])', r'$\1\\cdot\2$', text)
+    
     return text
 
 

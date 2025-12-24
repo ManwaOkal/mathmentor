@@ -331,7 +331,9 @@ def format_conversational_tutor_prompt(
     current_question_index: Optional[int] = None,
     student_response: Optional[str] = None,
     current_question: Optional[Dict[str, Any]] = None,
-    teaching_phase: str = "teaching"  # "teaching", "ready_check", "questioning", "review"
+    teaching_phase: str = "teaching",  # "teaching", "ready_check", "questioning", "review"
+    teaching_style: str = "guided",
+    difficulty: str = "intermediate"
 ) -> str:
     """
     Format prompt for conversational AI tutor with clear phases:
@@ -349,16 +351,69 @@ def format_conversational_tutor_prompt(
             content = msg.get('content', '')
             history_text += f"{role.upper()}: {content}\n"
     
+    # Define teaching style guidance
+    teaching_style_guidance = {
+        'socratic': 'SOCRATIC STYLE: Ask questions to guide discovery. Don\'t give direct answers - help students think through problems by asking probing questions. Encourage them to explain their reasoning. Example: "What do you think happens when...?" "Why might that be?" "Can you explain your thinking?"',
+        'direct': 'DIRECT STYLE: Explain concepts clearly and directly. Provide clear explanations, definitions, and step-by-step instructions. Be explicit about methods and procedures. Example: "Here\'s how we solve this: First... then... finally..."',
+        'guided': 'GUIDED STYLE: Provide step-by-step guidance with explanations. Break down problems into manageable steps, explain each step, and provide support as needed. Balance between explaining and letting students work. Example: "Let\'s work through this together. First, we need to..."',
+        'discovery': 'DISCOVERY STYLE: Let students explore and discover concepts themselves. Provide minimal guidance, ask open-ended questions, and let them experiment. Guide them when stuck but encourage independent thinking. Example: "Try working with this and see what patterns you notice..."',
+        'teacher': 'TEACHER STYLE: Act as a traditional teacher who listens to student needs and requests. Explain concepts step-by-step in a clear, structured manner. After explaining each step or concept, ask "Do you understand?" or "Does that make sense?" and wait for confirmation before proceeding. Give students opportunities to answer questions and demonstrate understanding. Be patient, encouraging, and responsive to what the student wants to learn. Example: "Let me explain this step by step. First, [explanation]. Does that make sense? [Wait for response]. Good! Now, [next step]. Can you try explaining this back to me?"'
+    }
+    
+    # Define difficulty level guidance
+    difficulty_guidance = {
+        'beginner': 'BEGINNER LEVEL: Use simple language, basic examples, and fundamental concepts. Avoid advanced terminology. Break everything into very small steps. Use concrete examples and analogies. Be very patient and encouraging.',
+        'intermediate': 'INTERMEDIATE LEVEL: Use standard mathematical language and notation. Include both basic and moderately complex examples. Balance between explanation and practice. Use appropriate technical terms.',
+        'advanced': 'ADVANCED LEVEL: Use precise mathematical language and notation. Include complex examples and applications. Can move faster through concepts. Expect deeper understanding and abstract thinking.'
+    }
+    
+    style_instruction = teaching_style_guidance.get(teaching_style.lower(), teaching_style_guidance['guided'])
+    difficulty_instruction = difficulty_guidance.get(difficulty.lower(), difficulty_guidance['intermediate'])
+    
     # PHASE 1: TEACHING - Comprehensive concept explanation
     if teaching_phase == "teaching":
-        prompt = r"""You are MathMentor, an expert AI mathematics tutor. Your goal is to comprehensively teach mathematical concepts before assessing understanding.
+        teacher_instructions_section = ""
+        if activity_description and activity_description.strip():
+            teacher_instructions_section = f"""
+**CRITICAL - TEACHER'S INSTRUCTIONS (YOU MUST FOLLOW THESE EXACTLY):**
+{activity_description}
+
+**IMPORTANT**: The teacher has specifically instructed you to teach: "{activity_description}"
+Your entire lesson MUST align with what the teacher wants students to learn. Use this as your primary guide for:
+- What concepts to cover
+- How to explain them
+- What examples to use
+- What approach to take
+- What learning objectives to achieve
+
+"""
+        
+        prompt = r"""You are MathMentor, an expert AI mathematics tutor. You have been programmed by the student's teacher to teach using their specific methods and instructions. Your goal is to comprehensively teach mathematical concepts before assessing understanding.
 
 Activity: {activity_title}
-Topic Description: {activity_description}
+{teacher_instructions}
+
+**CRITICAL - TEACHING STYLE (YOU MUST USE THIS EXACTLY):**
+{style_instruction}
+
+**CRITICAL - DIFFICULTY LEVEL (YOU MUST ADJUST TO THIS):**
+{difficulty_instruction}
+
 Current Question Set: {questions_count} questions
 
 **TEACHING PHASE - YOUR TASK**: 
 Provide a comprehensive, structured lesson on this mathematical topic. Cover all essential concepts thoroughly BEFORE moving to practice questions.
+**CRITICAL**: 
+- You have been programmed by the teacher to follow their specific teaching approach
+- Follow the teacher's instructions above EXACTLY - this is what they want students to learn
+- Use {teaching_style} teaching style EXACTLY as specified above - this determines HOW you teach
+- Adjust to {difficulty} difficulty level EXACTLY as specified above - this determines complexity and depth
+
+**IMPORTANT - STUDENT RESPONSES**:
+- If a student says "okay", "ok", "yes", "sure", "alright" - these are just acknowledgments, NOT requests to move forward
+- Continue teaching naturally - don't restart or change topics based on casual acknowledgments
+- Only move to questions when the student EXPLICITLY says they're ready (e.g., "ready", "I'm ready", "ready for questions")
+- Treat "okay" as acknowledgment and continue with your current teaching flow
 
 **LESSON STRUCTURE**:
 
@@ -424,6 +479,13 @@ Provide a comprehensive, structured lesson on this mathematical topic. Cover all
 - **Anticipate confusion**: Address common misconceptions proactively
 - **Encourage engagement**: Use inclusive language like "we" and "let's"
 
+**CRITICAL - HANDLING STUDENT RESPONSES**:
+- If the student says "okay", "ok", "yes", "sure", "alright" - these are acknowledgments, NOT requests to restart or change topics
+- Continue naturally with your teaching - acknowledge briefly if needed, then continue with the next concept or example
+- DO NOT restart the lesson or repeat what you just said when the student says "okay"
+- DO NOT treat "okay" as a signal to move to questions - only move when they explicitly say "ready"
+- If you've already started teaching, continue with the next part of your lesson naturally
+
 **After your comprehensive lesson**, ask:
 "Now that we've covered [topic], are you ready to try some practice questions to test your understanding?"
 
@@ -433,20 +495,41 @@ Provide a comprehensive, structured lesson on this mathematical topic. Cover all
 - Use proper mathematical rigor but make it accessible
 - Prepare the student for the types of questions they'll see
 - End with the readiness check question
+- Continue teaching naturally - don't restart when student acknowledges with "okay"
 
-Generate a comprehensive, structured lesson following these guidelines."""
+Generate a comprehensive, structured lesson following these guidelines. If the student just said "okay" or gave a casual acknowledgment, acknowledge briefly (e.g., "Good!") and continue naturally with the next part of your teaching - DO NOT restart or repeat what you already said."""
 
         return prompt.format(
             activity_title=activity_title,
-            activity_description=activity_description or 'Mathematics learning activity',
-            questions_count=len(questions) if questions else "several"
+            teacher_instructions=teacher_instructions_section,
+            style_instruction=style_instruction,
+            difficulty_instruction=difficulty_instruction,
+            teaching_style=teaching_style,
+            difficulty=difficulty,
+            questions_count=len(questions) if questions else "several",
+            student_response=student_response or "[No response yet]"
         )
     
     # PHASE 2: READY CHECK - Ask if student is ready for questions
     elif teaching_phase == "ready_check":
+        teacher_instructions_section = ""
+        if activity_description and activity_description.strip():
+            teacher_instructions_section = f"""
+TEACHER'S INSTRUCTIONS (REMEMBER WHAT THE TEACHER WANTS STUDENTS TO LEARN):
+{activity_description}
+
+"""
         prompt = """You are MathMentor, transitioning from teaching to practice.
 
 Activity: {activity_title}
+{teacher_instructions}
+
+**CRITICAL - TEACHING STYLE (YOU MUST USE THIS EXACTLY):**
+{style_instruction}
+
+**CRITICAL - DIFFICULTY LEVEL (YOU MUST ADJUST TO THIS):**
+{difficulty_instruction}
+
 {history_text}
 
 **YOUR TASK**: Check if the student is ready to proceed to practice questions. 
@@ -455,13 +538,15 @@ If they need more review, provide targeted review of specific areas.
 
 **RESPONSE OPTIONS**:
 
-**If student says "yes", "ready", "I'm ready", etc.**:
+**If student explicitly says they're ready** (e.g., "ready", "I'm ready", "ready for questions", "let's start", "let's begin"):
 1. Acknowledge their readiness: "Great! Let's begin with some practice questions."
 2. Present the FIRST question clearly with proper math formatting:
    - State: "Question 1: [Question text]"
    - Use $ delimiters for all math expressions
    - Make the question stand out clearly
 3. Ask: "Take your time to solve this. What's your answer and can you explain your reasoning?"
+
+**IMPORTANT**: Do NOT treat casual responses like "okay", "yes", "ok", "sure", "alright" as readiness indicators. These are just acknowledgments, not explicit readiness to start questions.
 
 **If student says "no", "not yet", "need more help", etc.**:
 1. Acknowledge: "That's perfectly fine. Let's review the key concepts again."
@@ -470,6 +555,11 @@ If they need more review, provide targeted review of specific areas.
    - "Should we review [specific concept 1]?"
    - "Would you like more examples of [specific concept 2]?"
    - "Do you want me to explain [specific method] step-by-step again?"
+
+**If student gives casual acknowledgment** (e.g., "okay", "yes", "ok", "sure"):
+1. Treat this as acknowledgment, NOT readiness
+2. Continue with teaching or ask a clarifying question: "Would you like me to explain anything else, or are you ready to try some practice questions?"
+3. Wait for explicit readiness before moving to questions
 
 **If student is unsure or gives vague response**:
 1. Say: "Let me give you a quick self-check. Try these:"
@@ -485,6 +575,8 @@ If they need more review, provide targeted review of specific areas.
 - Use proper mathematical notation
 
 **GENERAL GUIDELINES**:
+- Use {teaching_style} teaching style EXACTLY as specified above
+- Adjust complexity to {difficulty} difficulty level EXACTLY as specified above
 - Be encouraging and patient
 - Don't pressure them to move forward if they're not ready
 - Provide clear options for review if needed
@@ -492,10 +584,15 @@ If they need more review, provide targeted review of specific areas.
 
 Current student response: "{student_response}"
 
-Generate your response based on the student's readiness indication."""
+Generate your response based on the student's readiness indication, using the specified teaching style and difficulty level."""
 
         return prompt.format(
             activity_title=activity_title,
+            teacher_instructions=teacher_instructions_section,
+            style_instruction=style_instruction,
+            difficulty_instruction=difficulty_instruction,
+            teaching_style=teaching_style,
+            difficulty=difficulty,
             history_text=history_text,
             student_response=student_response or "[No response yet]"
         )
@@ -506,9 +603,28 @@ Generate your response based on the student's readiness indication."""
         correct_answer = current_question.get('correct_answer', '') if current_question else ""
         question_type = current_question.get('question_type', 'short_answer') if current_question else ""
         
+        teacher_instructions_section = ""
+        if activity_description and activity_description.strip():
+            teacher_instructions_section = f"""
+TEACHER'S INSTRUCTIONS (REMEMBER WHAT THE TEACHER WANTS STUDENTS TO LEARN):
+{activity_description}
+
+CRITICAL: Guide practice based on what the teacher wants students to learn: "{activity_description}"
+Make sure your feedback and guidance align with the teacher's learning objectives.
+
+"""
+        
         prompt = """You are MathMentor, guiding a student through practice questions with intelligent feedback.
 
 Activity: {activity_title}
+{teacher_instructions}
+
+**CRITICAL - TEACHING STYLE (YOU MUST USE THIS EXACTLY):**
+{style_instruction}
+
+**CRITICAL - DIFFICULTY LEVEL (YOU MUST ADJUST TO THIS):**
+{difficulty_instruction}
+
 Current Question ({current_index}/{total_questions}): "{current_q_text}"
 Correct Answer: {correct_answer} (FOR YOUR REFERENCE ONLY - DO NOT REVEAL)
 Question Type: {question_type}
@@ -516,24 +632,31 @@ Question Type: {question_type}
 
 Student's Response: "{student_response}"
 
-**YOUR TASK**: 
-1. Evaluate if the response addresses the question
-2. If answer is WRONG or INCOMPLETE: Guide them to discover the correct approach
-3. If answer is CORRECT: Ask for deeper explanation or provide extension
+**YOUR TASK - CRITICAL ORDER**: 
+1. **FIRST**: Compare the student's response to the correct answer provided above
+2. **If answer is CORRECT**: Acknowledge it clearly and move forward - DO NOT ask to double-check or verify
+3. **If answer is WRONG or INCOMPLETE**: Guide them to discover the correct approach
 4. NEVER give away the answer directly
 
 **EVALUATION FRAMEWORK**:
 
-**Step 1: Check Relevance**
+**Step 1: Check Correctness FIRST**
+- Compare student's response to the correct answer: {correct_answer}
+- Check if their final answer matches (accounting for different formats: "3" = "x=3" = "three")
+- Check if their work/process shows correct understanding
+- **CRITICAL**: If the answer is CORRECT, acknowledge it immediately and move on - do NOT ask them to verify or double-check
+
+**Step 2: Check Relevance** (only if answer is wrong)
 - Is the response mathematically relevant to the question?
 - Does it show genuine attempt at solving?
 - If OFF-TOPIC: "Let's focus on the question about [specific aspect]."
 
-**Step 2: Analyze Understanding** (Based on response)
-A. **COMPLETE & CORRECT**:
-   * Praise specific aspects: "Good work on [specific step]"
-   * Ask for deeper explanation: "Can you explain why you chose that method?"
-   * Provide extension: "Now, what if we changed [aspect]?"
+**Step 3: Analyze Understanding** (Based on response)
+A. **COMPLETE & CORRECT** (Answer matches correct answer):
+   * ✅ **IMMEDIATELY acknowledge**: "That's correct!" or "Exactly right!" or "Perfect!"
+   * ✅ **Praise specific work**: "Great job on [specific step] - you correctly [did X]"
+   * ✅ **Move forward**: Either ask next question OR provide extension OR ask for explanation of method
+   * ❌ **DO NOT**: Ask to "double-check", "verify", or "confirm" - they already got it right!
 
 B. **PARTIALLY CORRECT or ON RIGHT TRACK**:
    * Acknowledge correct parts: "You're right about [part]"
@@ -584,16 +707,23 @@ D. **WRONG with NO WORK/SHOWS CONFUSION**:
 Current: Question {current_index} of {total_questions}
 
 **Your response should**:
-1. Acknowledge their attempt (even if wrong)
-2. Provide SPECIFIC, actionable guidance (not "try again")
-3. Ask a specific follow-up question or move to next question
-4. Use proper math notation
-5. Be encouraging but focused on learning
+1. Use {teaching_style} teaching style EXACTLY as specified above - this determines HOW you provide feedback
+2. Adjust feedback complexity to {difficulty} difficulty level EXACTLY as specified above
+3. Acknowledge their attempt (even if wrong)
+4. Provide SPECIFIC, actionable guidance (not "try again")
+5. Ask a specific follow-up question or move to next question
+6. Use proper math notation
+7. Be encouraging but focused on learning
 
-Generate your guided feedback response."""
+Generate your guided feedback response using the specified teaching style and difficulty level."""
 
         return prompt.format(
             activity_title=activity_title,
+            teacher_instructions=teacher_instructions_section,
+            style_instruction=style_instruction,
+            difficulty_instruction=difficulty_instruction,
+            teaching_style=teaching_style,
+            difficulty=difficulty,
             current_q_text=current_q_text,
             correct_answer=f'"{correct_answer}"' if correct_answer else "[Hidden for assessment]",
             question_type=question_type,
@@ -605,9 +735,28 @@ Generate your guided feedback response."""
     
     # PHASE 4: REVIEW - Summarize learning and provide next steps
     elif teaching_phase == "review":
+        teacher_instructions_section = ""
+        if activity_description and activity_description.strip():
+            teacher_instructions_section = f"""
+TEACHER'S INSTRUCTIONS (EVALUATE BASED ON WHAT THE TEACHER WANTS STUDENTS TO LEARN):
+{activity_description}
+
+CRITICAL: Assess whether the student has learned what the teacher specified: "{activity_description}"
+Your review should focus on whether they understand the concepts the teacher wanted them to learn.
+
+"""
+        
         prompt = """You are MathMentor, providing comprehensive review after practice questions.
 
 Activity: {activity_title}
+{teacher_instructions}
+
+**CRITICAL - TEACHING STYLE (YOU MUST USE THIS EXACTLY):**
+{style_instruction}
+
+**CRITICAL - DIFFICULTY LEVEL (YOU MUST ADJUST TO THIS):**
+{difficulty_instruction}
+
 Questions Completed: {completed_count}/{total_questions}
 {history_text}
 
@@ -663,10 +812,19 @@ Questions Completed: {completed_count}/{total_questions}
 3. Feel motivated to continue
 4. Have clear direction for improvement
 
-Generate a comprehensive, constructive review following these guidelines."""
+**CRITICAL**: 
+- Use {teaching_style} teaching style EXACTLY as specified above - this determines HOW you provide the review
+- Adjust review depth to {difficulty} difficulty level EXACTLY as specified above
+
+Generate a comprehensive, constructive review following these guidelines and using the specified teaching style and difficulty level."""
 
         return prompt.format(
             activity_title=activity_title,
+            teacher_instructions=teacher_instructions_section,
+            style_instruction=style_instruction,
+            difficulty_instruction=difficulty_instruction,
+            teaching_style=teaching_style,
+            difficulty=difficulty,
             completed_count=current_question_index if current_question_index else 0,
             total_questions=len(questions) if questions else 0,
             history_text=history_text
@@ -693,12 +851,15 @@ def determine_teaching_phase_logic(
         for msg in conversation_history
     )
     
-    # Check if student said they're ready
+    # Check if student said they're ready - use explicit phrases only
+    # Don't trigger on casual "okay" or "yes" - these are too ambiguous
     student_ready = any(
         msg.get('role') == 'user' and 
-        any(keyword in msg.get('content', '').lower() for keyword in [
-            'ready', 'yes', 'ready for questions', 'let\'s practice', 'start questions'
-        ])
+        any(phrase in msg.get('content', '').lower() for phrase in [
+            'ready', 'i\'m ready', 'i am ready', 'ready for questions', 
+            'let\'s practice', 'start questions', 'ready to start', 'let\'s begin'
+        ]) and
+        msg.get('content', '').lower().strip() not in ['okay', 'ok', 'yes', 'yep', 'yeah', 'sure', 'alright']
         for msg in conversation_history
     )
     
@@ -715,6 +876,28 @@ def determine_teaching_phase_logic(
     all_questions_done = current_question_index is not None and current_question_index >= total_questions
     
     # Decision logic
+    # CRITICAL: Check the last message - if it's just "okay", "ok", "yes", etc., don't change phase
+    last_message = conversation_history[-1] if conversation_history else None
+    last_is_casual_ack = False
+    if last_message and last_message.get('role') == 'user':
+        last_content = last_message.get('content', '').lower().strip()
+        casual_acknowledgments = ['okay', 'ok', 'yes', 'yep', 'yeah', 'sure', 'alright', 'got it', 'i see', 'i understand', 'mhm', 'uh huh']
+        last_is_casual_ack = last_content in casual_acknowledgments
+    
+    # If last message is casual acknowledgment, maintain current phase based on context
+    if last_is_casual_ack:
+        # If we've asked about readiness, stay in ready_check
+        if asked_ready_check:
+            return "ready_check"
+        # If questions have been asked, stay in questioning
+        if questions_asked:
+            return "questioning"
+        # Otherwise, continue teaching
+        if has_teaching:
+            return "teaching"
+        return "teaching"
+    
+    # Normal phase logic (only if not casual acknowledgment)
     if not has_teaching:
         return "teaching"
     elif has_teaching and not asked_ready_check:

@@ -27,7 +27,7 @@ export default function ActivityCreation({
   const [description, setDescription] = useState('')
   const [topic, setTopic] = useState('')
   const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate')
-  const [teachingStyle, setTeachingStyle] = useState<'socratic' | 'direct' | 'guided' | 'discovery'>('guided')
+  const [teachingStyle, setTeachingStyle] = useState<'socratic' | 'direct' | 'guided' | 'discovery' | 'teacher'>('guided')
   const [estimatedTimeMinutes, setEstimatedTimeMinutes] = useState(15)
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>({
     status: 'idle',
@@ -253,6 +253,7 @@ export default function ActivityCreation({
               <option value="direct">Direct (Explain clearly)</option>
               <option value="guided">Guided (Step-by-step)</option>
               <option value="discovery">Discovery (Let student explore)</option>
+              <option value="teacher">Teacher (Listen & explain step-by-step)</option>
             </select>
           </div>
 

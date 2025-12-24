@@ -41,20 +41,31 @@ function TeacherPageContent() {
   }
 
   const handleSyncActivities = async () => {
-    if (!activeClassroom || !session?.access_token) return
+    if (!activeClassroom || !session?.access_token) {
+      console.error('Cannot sync: missing classroom or session')
+      return
+    }
     
     setSyncing(true)
     setSyncMessage(null)
     
     try {
+      console.log('Syncing activities for classroom:', activeClassroom.classroom_id)
       const result = await api.syncClassroomActivities(activeClassroom.classroom_id, session.access_token)
+      console.log('Sync result:', result)
+      
       setSyncMessage({
         type: 'success',
         text: `Successfully synced ${result.synced_count || 0} activities to ${result.students_processed || 0} student(s)`
       })
+      
+      // Refresh the activity list after successful sync
+      setRefreshKey(prev => prev + 1)
+      
       // Clear message after 5 seconds
       setTimeout(() => setSyncMessage(null), 5000)
     } catch (error: any) {
+      console.error('Sync error:', error)
       setSyncMessage({
         type: 'error',
         text: error?.message || 'Failed to sync activities. Please try again.'
@@ -79,26 +90,29 @@ function TeacherPageContent() {
       {/* Section Content */}
       {activeSection === 'activities' && (
         <div>
-          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 sm:gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 sm:gap-4 mb-8 sm:mb-6">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-light text-slate-900 tracking-tight mb-1">Activities</h2>
               <p className="text-xs sm:text-sm text-slate-500 font-light">Manage and organize your learning activities</p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="flex gap-2 w-full sm:w-auto">
               <button
-                onClick={handleSyncActivities}
-                disabled={syncing}
-                className="self-start sm:self-auto px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center gap-1.5 sm:gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleSyncActivities()
+                }}
+                disabled={syncing || !activeClassroom || !session?.access_token}
+                className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!activeClassroom || !session?.access_token ? 'Please select a classroom' : 'Sync activities to all students'}
               >
-                <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${syncing ? 'animate-spin' : ''}`} />
-                <span>{syncing ? 'Syncing...' : 'Sync Activities'}</span>
+                <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+                <span className="whitespace-nowrap">{syncing ? 'Syncing...' : 'Sync Activities'}</span>
               </button>
               <button
                 onClick={() => setShowPromptActivityCreation(true)}
-                className="self-start sm:self-auto px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center gap-1.5 sm:gap-2 shadow-sm"
+                className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center justify-center gap-2 shadow-sm"
               >
-                <span className="text-slate-600">+</span>
-                <span>Create Activity</span>
+                <span className="text-slate-600 text-lg leading-none">+</span>
+                <span className="whitespace-nowrap">Create Activity</span>
               </button>
             </div>
           </div>
@@ -144,12 +158,12 @@ function TeacherPageContent() {
         </div>
       )}
 
-      {activeSection === 'analytics' && (
-        <AnalyticsDashboard classroomId={activeClassroom.classroom_id} />
-      )}
-
       {activeSection === 'finetuning' && (
         <TeacherFineTuning />
+      )}
+
+      {activeSection === 'analytics' && (
+        <AnalyticsDashboard classroomId={activeClassroom.classroom_id} />
       )}
 
       {/* Activity Assignment Modal */}

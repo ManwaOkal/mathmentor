@@ -27,8 +27,17 @@ function preprocessLatex(content: string): string {
     { pattern: /```[\s\S]*?```/g, replacement: (match) => `__CODE_BLOCK__${btoa(match)}__END__` },
     { pattern: /`[^`]+`/g, replacement: (match) => `__INLINE_CODE__${btoa(match)}__END__` },
     
-    // Matrix sizes (m×n, n×p, etc.)
+    // Matrix sizes (m×n, n×p, etc.) - handle Unicode × symbol
     { pattern: /\b([a-zA-Z])\s*×\s*([a-zA-Z])\b/g, replacement: '$$1 \\times $2$' },
+    { pattern: /\b(\d+)\s*×\s*(\d+)\b/g, replacement: '$$1 \\times $2$' },
+    
+    // Handle \times without delimiters (from backend) - wrap in $ delimiters
+    { pattern: /(?<!\$)(\d+)\\times(\d+)(?!\$)/g, replacement: '$$1\\times$2$' },
+    { pattern: /(?<!\$)([A-Za-z])\\times([A-Za-z])(?!\$)/g, replacement: '$$1\\times$2$' },
+    { pattern: /(?<!\$)(\d+)\\times([A-Za-z])(?!\$)/g, replacement: '$$1\\times$2$' },
+    { pattern: /(?<!\$)([A-Za-z])\\times(\d+)(?!\$)/g, replacement: '$$1\\times$2$' },
+    // More general pattern for \times in context
+    { pattern: /(?<!\$)([^\s$]+)\\times([^\s$]+)(?=\s|$|\.|,|;|:|\))(?!\$)/g, replacement: '$$1\\times$2$' },
     
     // Matrix declarations like "A = [1 2; 3 4]"
     { pattern: /([A-Z])\s*=\s*\[([^\]]+)\]/g, replacement: '$$1 = \\begin{bmatrix} $2 \\end{bmatrix}$' },

@@ -62,7 +62,7 @@ class ResponseGenerator:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are MathMentor, an expert high school math tutor. Always use LaTeX notation for mathematical expressions (wrap in $ for inline, $$ for block equations). Be concise but thorough."
+                        "content": "You are MathMentor, an expert high school math tutor. Always use LaTeX notation for mathematical expressions (wrap in $ for inline, $$ for block equations). Be brief and concise - aim for 2-4 sentences maximum. Get straight to the point."
                     },
                     {
                         "role": "user",

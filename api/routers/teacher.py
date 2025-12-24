@@ -52,6 +52,13 @@ class CreateActivityRequest(BaseModel):
     num_questions: int = 10
     settings: Optional[dict] = {}
 
+class UpdateActivityRequest(BaseModel):
+    title: str
+    description: Optional[str] = None
+    activity_type: str
+    difficulty: str = "intermediate"
+    settings: Optional[dict] = {}
+
 class CreateAsyncActivityRequest(BaseModel):
     document_id: str
     title: str
@@ -868,6 +875,88 @@ async def get_activity_questions(
         return {
             "activity": activity_result.data,
             "questions": questions
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/activities/{activity_id}")
+async def update_activity(
+    activity_id: str,
+    request: UpdateActivityRequest,
+    user: dict = Depends(get_current_teacher)
+):
+    """Update an existing learning activity."""
+    try:
+        supabase = get_supabase_client()
+        
+        # Verify activity belongs to teacher
+        activity_result = supabase.table('learning_activities').select('*').eq('activity_id', activity_id).eq('teacher_id', user['id']).single().execute()
+        
+        if not activity_result.data:
+            raise HTTPException(status_code=404, detail="Activity not found")
+        
+        # Update activity - always include all fields from request
+        update_data = {
+            'title': request.title,
+            'activity_type': request.activity_type,
+            'difficulty': request.difficulty,
+        }
+        
+        # Handle description - update it if provided (can be None to clear it)
+        update_data['description'] = request.description
+        
+        if request.settings:
+            update_data['settings'] = request.settings
+        
+        print(f"Updating activity {activity_id} with data: {update_data}")
+        result = supabase.table('learning_activities').update(update_data).eq('activity_id', activity_id).eq('teacher_id', user['id']).execute()
+        
+        print(f"Update result: {result.data}")
+        
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to update activity")
+        
+        # Reset all student activities for this activity to 'assigned' status
+        # This ensures students redo the activity with the updated content
+        try:
+            # First, get all student_activity_ids for this activity to delete responses
+            student_activities_result = supabase.table('student_activities').select('student_activity_id').eq('activity_id', activity_id).execute()
+            student_activity_ids = [sa['student_activity_id'] for sa in (student_activities_result.data or [])]
+            
+            # Delete all student responses for these activities (questions may have changed)
+            if student_activity_ids:
+                supabase.table('student_responses').delete().in_('student_activity_id', student_activity_ids).execute()
+                print(f"Deleted responses for {len(student_activity_ids)} student activities")
+            
+            # Reset student activities to 'assigned' status and clear completion data
+            student_activities_update = {
+                'status': 'assigned',
+                'completed_at': None,
+                'score': None,
+                'correct_answers': None,
+                'assessment': None,
+                'feedback': None,
+                'started_at': None,  # Reset started_at so they can start fresh
+                'responses': None  # Clear stored responses JSON
+            }
+            
+            reset_result = supabase.table('student_activities').update(
+                student_activities_update
+            ).eq('activity_id', activity_id).execute()
+            
+            print(f"Reset {len(reset_result.data) if reset_result.data else 0} student activities to 'assigned' status")
+        except Exception as e:
+            # Log error but don't fail the update - activity update succeeded
+            print(f"Warning: Failed to reset student activities: {e}")
+        
+        # Return updated activity data
+        updated_activity = result.data[0] if result.data else None
+        return {
+            "activity_id": activity_id,
+            "message": "Activity updated successfully",
+            "data": updated_activity
         }
     except HTTPException:
         raise
@@ -1755,8 +1844,19 @@ async def get_classroom_analytics(
         enrollments_result = supabase.table('student_enrollments').select('student_id').eq('classroom_id', classroom_id).execute()
         student_ids = [e['student_id'] for e in (enrollments_result.data or [])]
         
-        # Get student activities
-        activities_result = supabase.table('student_activities').select('*').in_('student_id', student_ids).execute() if student_ids else None
+        # Initialize student performance map for ALL enrolled students
+        student_performance_map = {}
+        for student_id in student_ids:
+            student_performance_map[student_id] = {
+                'total_activities': 0,
+                'completed_activities': 0,
+                'total_score': 0,
+                'score_count': 0,
+                'scores': []
+            }
+        
+        # Get student activities with activity details
+        activities_result = supabase.table('student_activities').select('*, learning_activities(title)').in_('student_id', student_ids).execute() if student_ids else None
         
         # Calculate metrics
         total_students = len(student_ids)
@@ -1768,16 +1868,72 @@ async def get_classroom_analytics(
         if activities_result and activities_result.data:
             for activity in activities_result.data:
                 total_activities += 1
+                student_id = activity.get('student_id')
+                
+                # Ensure student is in the map (should already be there, but safety check)
+                if student_id not in student_performance_map:
+                    student_performance_map[student_id] = {
+                        'total_activities': 0,
+                        'completed_activities': 0,
+                        'total_score': 0,
+                        'score_count': 0,
+                        'scores': []
+                    }
+                
+                student_performance_map[student_id]['total_activities'] += 1
+                
                 if activity.get('status') == 'completed':
                     completed_activities += 1
-                    if activity.get('score'):
-                        total_score += activity['score']
+                    student_performance_map[student_id]['completed_activities'] += 1
+                    
+                    # Only include activities with valid scores (not None)
+                    score = activity.get('score')
+                    if score is not None:
+                        score_value = float(score)
+                        total_score += score_value
                         score_count += 1
+                        student_performance_map[student_id]['total_score'] += score_value
+                        student_performance_map[student_id]['score_count'] += 1
+                        student_performance_map[student_id]['scores'].append(score_value)
         
+        # Calculate average score from only completed activities with scores
         average_score = (total_score / score_count) if score_count > 0 else 0
         
-        # TODO: Get struggling concepts and generate AI insights
-        # For now, return basic metrics
+        # Get student names for performance data - include ALL enrolled students
+        student_performance_list = []
+        if student_ids:
+            users_result = supabase.table('users').select('id, name, email').in_('id', student_ids).execute()
+            users_dict = {u['id']: u for u in (users_result.data or [])}
+            
+            # Get last activity dates for all students
+            for student_id in student_ids:
+                perf_data = student_performance_map.get(student_id, {
+                    'total_activities': 0,
+                    'completed_activities': 0,
+                    'total_score': 0,
+                    'score_count': 0
+                })
+                user_data = users_dict.get(student_id, {})
+                student_avg_score = (perf_data['total_score'] / perf_data['score_count']) if perf_data['score_count'] > 0 else 0
+                
+                # Get last activity date
+                last_activity = supabase.table('student_activities').select('completed_at, started_at').eq('student_id', student_id).order('completed_at', desc=True).order('started_at', desc=True).limit(1).execute()
+                last_activity_date = None
+                if last_activity.data:
+                    last_activity_date = last_activity.data[0].get('completed_at') or last_activity.data[0].get('started_at')
+                
+                student_performance_list.append({
+                    'student_id': student_id,
+                    'name': user_data.get('name', 'Unknown'),
+                    'email': user_data.get('email', ''),
+                    'total_activities': perf_data['total_activities'],
+                    'completed_activities': perf_data['completed_activities'],
+                    'average_score': round(student_avg_score, 2),
+                    'last_activity_date': last_activity_date
+                })
+            
+            # Sort by average score descending (students with no scores will be at 0.0)
+            student_performance_list.sort(key=lambda x: x['average_score'], reverse=True)
         
         return {
             "metrics": {
@@ -1787,11 +1943,158 @@ async def get_classroom_analytics(
                 "completed_activities": completed_activities,
                 "average_score": round(average_score, 2)
             },
-            "student_performance": [],  # TODO: Implement
+            "student_performance": student_performance_list,
             "insights": "Analytics insights will be generated with AI integration",
             "struggling_concepts": [],
             "top_performers": {},
             "recommendations": []
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/analytics/{classroom_id}/student/{student_id}")
+async def get_student_analytics(
+    classroom_id: str,
+    student_id: str,
+    user: dict = Depends(get_current_teacher)
+):
+    """Get detailed analytics for a specific student in a classroom."""
+    try:
+        supabase = get_supabase_client()
+        
+        # Verify classroom belongs to teacher
+        classroom_result = supabase.table('classrooms').select('*').eq('classroom_id', classroom_id).eq('teacher_id', user['id']).single().execute()
+        
+        if not classroom_result.data:
+            raise HTTPException(status_code=404, detail="Classroom not found")
+        
+        # Verify student is enrolled in this classroom
+        enrollment_result = supabase.table('student_enrollments').select('*').eq('classroom_id', classroom_id).eq('student_id', student_id).single().execute()
+        
+        if not enrollment_result.data:
+            raise HTTPException(status_code=404, detail="Student not found in this classroom")
+        
+        # Get student user data
+        user_result = supabase.table('users').select('id, name, email').eq('id', student_id).single().execute()
+        if not user_result.data:
+            raise HTTPException(status_code=404, detail="Student user not found")
+        
+        user_data = user_result.data
+        
+        # Get all learning activities for this teacher
+        teacher_activities_result = supabase.table('learning_activities').select('activity_id').eq('teacher_id', user['id']).execute()
+        teacher_activity_ids = [a['activity_id'] for a in (teacher_activities_result.data or [])]
+        
+        if not teacher_activity_ids:
+            # No activities for this teacher, return empty results
+            return {
+                "student_id": student_id,
+                "name": user_data.get('name', 'Unknown'),
+                "email": user_data.get('email', ''),
+                "enrolled_at": enrollment_result.data.get('enrolled_at'),
+                "summary": {
+                    "total_activities": 0,
+                    "completed_activities": 0,
+                    "in_progress_activities": 0,
+                    "assigned_activities": 0,
+                    "average_score": 0,
+                    "highest_score": None,
+                    "lowest_score": None,
+                    "completion_rate": 0
+                },
+                "activity_breakdown": [],
+                "score_trend": "insufficient_data",
+                "recent_scores": []
+            }
+        
+        # Get student activities that match teacher's activities
+        activities_result = supabase.table('student_activities').select(
+            '*, learning_activities(title, activity_type, difficulty)'
+        ).eq('student_id', student_id).in_('activity_id', teacher_activity_ids).execute()
+        
+        classroom_activities = activities_result.data or []
+        
+        # Calculate summary metrics
+        total_activities = len(classroom_activities)
+        completed_activities = 0
+        in_progress_activities = 0
+        assigned_activities = 0
+        total_score = 0
+        score_count = 0
+        scores = []  # Track all scores for range calculation
+        
+        activity_breakdown = []
+        
+        for activity in classroom_activities:
+            status = activity.get('status', 'assigned')
+            activity_data = activity.get('learning_activities', {}) or {}
+            
+            # Get score for this activity
+            score = activity.get('score')
+            score_value = None
+            if score is not None:
+                score_value = float(score)
+            
+            if status == 'completed':
+                completed_activities += 1
+                # Only include scores from completed activities with valid scores
+                if score_value is not None:
+                    total_score += score_value
+                    score_count += 1
+                    scores.append(score_value)
+            elif status == 'in_progress':
+                in_progress_activities += 1
+            else:
+                assigned_activities += 1
+            
+            activity_breakdown.append({
+                'activity_id': activity.get('activity_id'),
+                'title': activity_data.get('title', 'Untitled Activity'),
+                'activity_type': activity_data.get('activity_type', 'quiz'),
+                'difficulty': activity_data.get('difficulty', 'intermediate'),
+                'status': status,
+                'score': score_value,
+                'completed_at': activity.get('completed_at'),
+                'started_at': activity.get('started_at'),
+                'total_questions': activity.get('total_questions'),
+                'correct_answers': activity.get('correct_answers'),
+                'feedback': activity.get('feedback')
+            })
+        
+        # Calculate average score from only completed activities with scores
+        average_score = (total_score / score_count) if score_count > 0 else 0
+        
+        # Calculate score range
+        highest_score = max(scores) if scores else None
+        lowest_score = min(scores) if scores else None
+        
+        # Calculate completion rate
+        completion_rate = (completed_activities / total_activities * 100) if total_activities > 0 else 0
+        
+        # Calculate score trend (simplified - compare recent vs older scores)
+        recent_scores = sorted(scores, reverse=True)[:5] if scores else []
+        score_trend = "improving" if len(recent_scores) >= 2 and recent_scores[0] > recent_scores[-1] else "stable" if len(recent_scores) >= 2 else "insufficient_data"
+        
+        return {
+            "student_id": student_id,
+            "name": user_data.get('name', 'Unknown'),
+            "email": user_data.get('email', ''),
+            "enrolled_at": enrollment_result.data.get('enrolled_at'),
+            "summary": {
+                "total_activities": total_activities,
+                "completed_activities": completed_activities,
+                "in_progress_activities": in_progress_activities,
+                "assigned_activities": assigned_activities,
+                "average_score": round(average_score, 2),
+                "highest_score": round(highest_score, 2) if highest_score is not None else None,
+                "lowest_score": round(lowest_score, 2) if lowest_score is not None else None,
+                "completion_rate": round(completion_rate, 2)
+            },
+            "activity_breakdown": activity_breakdown,
+            "score_trend": score_trend,
+            "recent_scores": recent_scores
         }
     except HTTPException:
         raise

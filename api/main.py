@@ -195,6 +195,13 @@ async def root():
     return {"message": "MathMentor API", "status": "running"}
 
 
+@app.get("/favicon.ico")
+async def favicon():
+    """Handle favicon requests to prevent 500 errors."""
+    from fastapi.responses import Response
+    return Response(status_code=204)  # No content
+
+
 @app.post("/api/ask-question", response_model=QuestionResponse)
 async def ask_question(
     request: QuestionRequest,

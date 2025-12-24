@@ -1,14 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { Send, Loader2, ArrowLeft, Brain, Clock } from 'lucide-react'
+import { Send, Loader2, ArrowLeft, Brain, Clock, User, CheckCircle2, Home } from 'lucide-react'
 import { StudentActivity as StudentActivityType } from '@/lib/auth/types'
 import { api } from '@/lib/api'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth/useAuth'
 import Navbar from '../Navbar'
-import Auth from '../Auth'
 
 // Lazy load markdown renderer
 const MarkdownRenderer = dynamic(() => import('../MarkdownRenderer'), {
@@ -33,9 +32,10 @@ type LearningPhase = 'introduction' | 'teach' | 'practice' | 'evaluate' | 'compl
 
 interface StudentActivityProps {
   activityId: string
+  onActivityCompleted?: () => void
 }
 
-export default function StudentActivity({ activityId }: StudentActivityProps) {
+export default function StudentActivity({ activityId, onActivityCompleted }: StudentActivityProps) {
   const router = useRouter()
   const { session } = useAuth()
   const [activity, setActivity] = useState<StudentActivityType | null>(null)
@@ -147,21 +147,60 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
           return // Don't proceed with normal flow for completed activities
         }
         
-        // Get activity introduction and automatically start teaching
-        try {
-          const introResponse = await api.getActivityIntroduction(data.activity.activity_id)
+        // Check if there's saved conversation history for in-progress activities
+        if (data.student_activity.metadata?.conversation_history && 
+            Array.isArray(data.student_activity.metadata.conversation_history) &&
+            data.student_activity.metadata.conversation_history.length > 0) {
+          // Restore saved conversation
+          const history = data.student_activity.metadata.conversation_history
+          const loadedMessages: Message[] = history.map((msg: any, idx: number) => ({
+            role: msg.role,
+            content: msg.content,
+            timestamp: new Date(),
+            id: `loaded_${idx}`
+          }))
+          setMessages(loadedMessages)
           
-          // Ensure we have valid introduction data
-          if (introResponse && introResponse.trim() && !introResponse.includes('Welcome\n\n\n\nI\'m your')) {
-            const introMessage: Message = {
-              role: 'assistant',
-              content: introResponse,
-              timestamp: new Date(),
-              id: 'intro'
-            }
-            setMessages([introMessage])
+          // Determine current phase based on conversation length
+          // This is a simple heuristic - you might want to make it smarter
+          const conversationLength = history.length
+          if (conversationLength >= 13) {
+            setCurrentPhase('evaluate')
+          } else if (conversationLength >= 10) {
+            setCurrentPhase('practice')
+          } else if (conversationLength >= 6) {
+            setCurrentPhase('teach')
           } else {
-            // If introduction is invalid, use fallback
+            setCurrentPhase('teach') // Default to teach phase
+          }
+        } else {
+          // No saved conversation - start fresh with introduction
+          try {
+            const introResponse = await api.getActivityIntroduction(data.activity.activity_id, sessionToken || undefined)
+            
+            // Ensure we have valid introduction data
+            if (introResponse && introResponse.trim() && !introResponse.includes('Welcome\n\n\n\nI\'m your')) {
+              const introMessage: Message = {
+                role: 'assistant',
+                content: introResponse,
+                timestamp: new Date(),
+                id: 'intro'
+              }
+              setMessages([introMessage])
+            } else {
+              // If introduction is invalid, use fallback
+              const introMessage: Message = {
+                role: 'assistant',
+                content: generateWelcomeMessage(),
+                timestamp: new Date(),
+                id: 'intro'
+              }
+              setMessages([introMessage])
+            }
+            // Skip introduction phase and go straight to teach
+            setCurrentPhase('teach')
+          } catch (error) {
+            console.error('Error getting introduction:', error)
             const introMessage: Message = {
               role: 'assistant',
               content: generateWelcomeMessage(),
@@ -169,20 +208,9 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
               id: 'intro'
             }
             setMessages([introMessage])
+            // Skip introduction phase and go straight to teach
+            setCurrentPhase('teach')
           }
-          // Skip introduction phase and go straight to teach
-          setCurrentPhase('teach')
-        } catch (error) {
-          console.error('Error getting introduction:', error)
-          const introMessage: Message = {
-            role: 'assistant',
-            content: generateWelcomeMessage(),
-            timestamp: new Date(),
-            id: 'intro'
-          }
-          setMessages([introMessage])
-          // Skip introduction phase and go straight to teach
-          setCurrentPhase('teach')
         }
         
         if (data.student_activity.status === 'assigned') {
@@ -242,13 +270,62 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
     }
   }, [input])
 
+  // Auto-save conversation periodically and on unmount
+  useEffect(() => {
+    if (!activity || !activity.student_activity_id || completed || !sessionToken) {
+      return
+    }
+
+    // Save conversation every 30 seconds if there are messages
+    const autoSaveInterval = setInterval(() => {
+      if (messages.length > 0) {
+        const conversationHistory = getConversationHistory()
+        if (conversationHistory.length > 0) {
+          api.saveConversation(activity.student_activity_id, conversationHistory, sessionToken).catch((error) => {
+            console.error('Error auto-saving conversation:', error)
+          })
+        }
+      }
+    }, 30000) // Save every 30 seconds
+
+    // Save when page becomes hidden (user switches tabs or minimizes)
+    const handleVisibilityChange = () => {
+      if (document.hidden && messages.length > 0) {
+        const conversationHistory = getConversationHistory()
+        if (conversationHistory.length > 0) {
+          api.saveConversation(activity.student_activity_id, conversationHistory, sessionToken).catch((error) => {
+            console.error('Error saving conversation on visibility change:', error)
+          })
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Cleanup: save conversation when navigating away
+    return () => {
+      clearInterval(autoSaveInterval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      
+      // Final save on unmount
+      if (messages.length > 0) {
+        const conversationHistory = getConversationHistory()
+        if (conversationHistory.length > 0) {
+          api.saveConversation(activity.student_activity_id, conversationHistory, sessionToken).catch((error) => {
+            console.error('Error saving conversation on unmount:', error)
+          })
+        }
+      }
+    }
+  }, [activity, messages, completed, sessionToken, getConversationHistory])
+
   const generateWelcomeMessage = () => {
-    return `Hi! My name is MathMentor, your AI math tutor. Your teacher has planned this lesson to help you master mathematical concepts through conversation. I'm here to help you succeed!`
+    return `Hi! My name is MathMentor, your AI math tutor. I've been programmed by your teacher to teach you using their specific methods and instructions. Your teacher has planned this lesson to help you master mathematical concepts through conversation. I'm here to help you succeed!`
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || sending || completed || currentPhase === 'complete' || activity?.status === 'completed') return
+    if (!input.trim() || sending || completed || activity?.status === 'completed') return
 
     const trimmedInput = input.trim()
     setInput('')
@@ -272,6 +349,9 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
         conversation_history: conversationHistory
       }, sessionToken || undefined)
 
+      // Set sending to false BEFORE adding the message to prevent double rendering
+      setSending(false)
+
       const aiMessage: Message = {
         role: 'assistant',
         content: phaseResponse.response || 'Thanks for your response!',
@@ -283,27 +363,24 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
       // Update phase if needed
       if (phaseResponse.next_phase && phaseResponse.next_phase !== currentPhase) {
         setCurrentPhase(phaseResponse.next_phase as LearningPhase)
-        
-        // If completing, calculate understanding
-        if (phaseResponse.next_phase === 'complete') {
-          try {
-            const assessment = await api.assessUnderstanding(activity!.activity_id, conversationHistory, sessionToken || undefined)
-            setUnderstandingScore(assessment.score)
-            setCompleted(true)
-          } catch (error) {
-            console.error('Error assessing understanding:', error)
-            setCompleted(true)
-          }
-        }
+        // Don't auto-complete - let user click the complete button when ready
       }
 
+      // Save conversation including the AI response
       try {
-        await api.saveConversation(activity!.student_activity_id, conversationHistory, sessionToken || undefined)
+        const fullConversationHistory = [
+          ...conversationHistory,
+          { role: 'assistant', content: phaseResponse.response || 'Thanks for your response!' }
+        ]
+        await api.saveConversation(activity!.student_activity_id, fullConversationHistory, sessionToken || undefined)
       } catch (error) {
         console.error('Error saving conversation:', error)
       }
     } catch (error) {
       console.error('Error getting tutor response:', error)
+      // Set sending to false BEFORE adding error message
+      setSending(false)
+      
       const fallbackMessage: Message = {
         role: 'assistant',
         content: `Thanks for your response! Let's continue exploring this concept together.`,
@@ -311,8 +388,6 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
         id: `fallback_${Date.now()}`
       }
       setMessages(prev => [...prev, fallbackMessage])
-    } finally {
-      setSending(false)
     }
   }
 
@@ -324,6 +399,10 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
       const conversationHistory = getConversationHistory()
       const { count: userMessageCount, hasMathematicalWork, isJustGreetings } = userMessageStats
 
+      // Track the score and feedback we'll send to the backend
+      let finalScore = 0
+      let finalFeedback: string | undefined = undefined
+
       // Only assess if there's meaningful conversation (more than just intro)
       if (conversationHistory.length > 1 && userMessageCount > 0) {
         try {
@@ -331,37 +410,44 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
           
           // Override if AI gave score but there's no actual math work
           if (!hasMathematicalWork || isJustGreetings) {
+            finalScore = 0
             setUnderstandingScore(0)
-            setAssessmentFeedback("No mathematical work demonstrated. Complete activities require solving problems or demonstrating understanding through mathematical work.")
+            // Let backend generate dynamic feedback - don't set fixed text
+            setAssessmentFeedback(null)
           } else {
+            finalScore = assessment.score
+            finalFeedback = assessment.feedback || undefined
             setUnderstandingScore(assessment.score)
+            // Use AI-generated feedback if available, otherwise let backend generate it
             setAssessmentFeedback(assessment.feedback || null)
           }
         } catch (error) {
           console.error('Error assessing understanding:', error)
           // Calculate score based on actual engagement - 0 if no math work
-          const estimatedScore = (isJustGreetings || !hasMathematicalWork) 
+          finalScore = (isJustGreetings || !hasMathematicalWork) 
             ? 0 
             : Math.min(30 + (userMessageCount * 10), 70)
           
-          setUnderstandingScore(estimatedScore)
-          setAssessmentFeedback(
-            estimatedScore === 0
-              ? "No mathematical work demonstrated. Complete activities require solving problems or demonstrating understanding through mathematical work."
-              : `You engaged in ${userMessageCount} exchange${userMessageCount !== 1 ? 's' : ''} with some mathematical work. More practice needed to demonstrate full understanding.`
-          )
+          setUnderstandingScore(finalScore)
+          // Let backend generate dynamic feedback instead of using fixed text
+          setAssessmentFeedback(null)
         }
       } else {
+        finalScore = 0
         setUnderstandingScore(0)
-        setAssessmentFeedback("No mathematical work demonstrated. Complete activities require solving problems or demonstrating understanding through mathematical work.")
+        // Let backend generate dynamic feedback
+        setAssessmentFeedback(null)
       }
+
+      // Always send score (backend will generate dynamic feedback if not provided)
+      console.log(`DEBUG: Sending score ${finalScore} and feedback ${finalFeedback ? 'present' : 'undefined'} to backend`)
 
       await api.completeConversationalActivity(
         activity.student_activity_id, 
         conversationHistory, 
         sessionToken || undefined,
-        understandingScore ?? undefined,
-        assessmentFeedback ?? undefined
+        finalScore,
+        finalFeedback
       )
       
       // Reload activity to get updated status from server
@@ -387,6 +473,13 @@ export default function StudentActivity({ activityId }: StudentActivityProps) {
         id: `final_${Date.now()}`
       }
       setMessages(prev => [...prev, finalMessage])
+      
+      // Notify parent to refresh activities list after a short delay to ensure backend has processed
+      setTimeout(() => {
+        if (onActivityCompleted) {
+          onActivityCompleted()
+        }
+      }, 500)
     } catch (error) {
       console.error('Error completing activity:', error)
       alert('Error completing activity. Please try again.')
@@ -433,61 +526,82 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-slate-50/30 to-white flex flex-col">
-      {/* Navigation Bar - matching design */}
+      {/* Navigation Bar - matching student landing page */}
       <Navbar
         leftContent={
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push('/student')}
-              className="p-1.5 hover:bg-slate-100 rounded-lg transition-all duration-200 flex-shrink-0 group"
-            >
-              <ArrowLeft className="w-4 h-4 text-slate-600 group-hover:text-slate-900 group-hover:-translate-x-0.5 transition-all" />
-            </button>
-            <div className="min-w-0">
-              <h1 className="text-xs sm:text-sm font-semibold text-slate-900 truncate tracking-tight">{activityTitle}</h1>
-              <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
-                <span className="text-xs text-slate-500 capitalize font-medium px-2 py-0.5 bg-slate-100 rounded-md">{currentPhase.replace('_', ' ')}</span>
-                <span className="text-xs text-slate-300 hidden sm:inline">•</span>
+          <button
+            onClick={() => router.push('/student')}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all duration-200 flex-shrink-0 group"
+            aria-label="Back to dashboard"
+          >
+            <Home className="w-4 h-4 transition-transform group-hover:scale-110" />
+            <span className="text-sm font-medium">Home</span>
+          </button>
+        }
+        centerContent={
+          <div className="min-w-0 flex-1 text-center">
+            <h1 className="text-base sm:text-lg font-bold text-slate-900 truncate tracking-tight">
+              {activityTitle || 'Math Activity'}
+            </h1>
+            {!completed && (
+              <div className="flex items-center justify-center gap-2 mt-0.5">
+                <span className="text-xs text-slate-500 capitalize font-medium px-2 py-0.5 bg-slate-100 rounded-md">
+                  {currentPhase.replace('_', ' ')}
+                </span>
                 <div className="flex items-center text-xs text-slate-500">
                   <Clock className="w-3 h-3 mr-1" />
                   {timeSpent} min
                 </div>
               </div>
-            </div>
+            )}
           </div>
         }
         rightContent={
-          !completed ? (
-            <button
-              onClick={completeActivity}
-              disabled={isCompleting || sending || !userMessageStats.canComplete}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all duration-200 text-xs sm:text-sm font-medium flex-shrink-0 ${
-                userMessageStats.canComplete
-                  ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-sm hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed'
-                  : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-              }`}
-              title={!userMessageStats.canComplete 
-                ? `Engage more with the activity. Complete activities require demonstrating understanding through problem-solving (${userMessageStats.count} message${userMessageStats.count !== 1 ? 's' : ''} so far).`
-                : `Complete activity (${userMessageStats.totalExchanges} exchange${userMessageStats.totalExchanges !== 1 ? 's' : ''})`
-              }
-            >
-              <span className="hidden sm:inline">
-                {isCompleting 
-                  ? 'Completing...' 
-                  : userMessageStats.canComplete 
-                    ? `Complete${userMessageStats.totalExchanges > 1 ? ` (${userMessageStats.totalExchanges})` : ''}`
-                    : userMessageStats.count === 0
-                      ? 'Start conversation'
-                      : `Engage more (${userMessageStats.count})`
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {!completed ? (
+              <button
+                onClick={completeActivity}
+                disabled={isCompleting || sending || !userMessageStats.canComplete}
+                className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl transition-all duration-200 text-sm font-semibold flex items-center gap-2 ${
+                  userMessageStats.canComplete
+                    ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed'
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                }`}
+                title={!userMessageStats.canComplete 
+                  ? `Engage more with the activity. Complete activities require demonstrating understanding through problem-solving (${userMessageStats.count} message${userMessageStats.count !== 1 ? 's' : ''} so far).`
+                  : `Complete activity (${userMessageStats.totalExchanges} exchange${userMessageStats.totalExchanges !== 1 ? 's' : ''})`
                 }
-              </span>
-              <span className="sm:hidden">
-                {isCompleting ? '...' : userMessageStats.canComplete ? 'Complete' : 'Start'}
-              </span>
-            </button>
-          ) : (
-            <Auth />
-          )
+              >
+                {isCompleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="hidden sm:inline">Completing...</span>
+                  </>
+                ) : userMessageStats.canComplete ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Complete</span>
+                    <span className="sm:hidden">Complete</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">
+                      {userMessageStats.count === 0
+                        ? 'Start conversation'
+                        : `Engage more (${userMessageStats.count})`
+                      }
+                    </span>
+                    <span className="sm:hidden">Start</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-xl border border-green-200">
+                <CheckCircle2 className="w-5 h-5" />
+                <span className="text-sm font-semibold hidden sm:inline">Completed</span>
+              </div>
+            )}
+          </div>
         }
       />
 
@@ -568,7 +682,7 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
       </main>
 
       {/* Input Area */}
-      {currentPhase !== 'complete' && (
+      {!completed && (
         <div className="sticky bottom-0 bg-white/98 backdrop-blur-lg border-t border-slate-200/60 px-4 sm:px-6 md:px-8 lg:px-10 py-4 sm:py-5 shadow-[0_-8px_24px_-4px_rgba(0,0,0,0.08)]">
           <div className="max-w-5xl mx-auto">
             <form onSubmit={handleSubmit} className="flex items-center gap-3">
@@ -613,7 +727,7 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
       )}
 
       {/* Completion Screen */}
-      {currentPhase === 'complete' && understandingScore !== null && (
+      {completed && understandingScore !== null && (
         <div className="fixed inset-0 bg-white/95 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto animate-in fade-in duration-200">
           <div className="bg-white border border-slate-200 rounded-xl max-w-2xl w-full p-8 shadow-xl my-8 animate-in zoom-in-95 duration-300">
             <div className="mb-8">
@@ -643,7 +757,9 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
               {assessmentFeedback && (
                 <div className="pt-4 border-t border-slate-200">
                   <h3 className="text-sm font-semibold text-slate-900 mb-3 tracking-wide">Feedback</h3>
-                  <p className="text-[15px] text-slate-700 leading-relaxed">{assessmentFeedback}</p>
+                  <div className="text-[15px] text-slate-700 leading-relaxed">
+                    <MarkdownRenderer content={assessmentFeedback} />
+                  </div>
                 </div>
               )}
 

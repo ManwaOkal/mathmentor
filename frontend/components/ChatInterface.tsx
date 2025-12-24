@@ -278,6 +278,9 @@ export default function ChatInterface({ onConversationUpdate }: ChatInterfacePro
     try {
       const response: QuestionResponse = await api.askQuestion(trimmedInput)
       
+      // Set loading to false BEFORE adding the message to prevent double rendering
+      setLoading(false)
+      
       const assistantMessage: Message = {
         role: 'assistant',
         content: response.answer,
@@ -289,8 +292,13 @@ export default function ChatInterface({ onConversationUpdate }: ChatInterfacePro
       setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
+        setLoading(false)
+        abortControllerRef.current = null
         return
       }
+      
+      // Set loading to false BEFORE adding error message
+      setLoading(false)
       
       const errorMessage: Message = {
         role: 'assistant',
@@ -300,7 +308,6 @@ export default function ChatInterface({ onConversationUpdate }: ChatInterfacePro
       }
       setMessages((prev) => [...prev, errorMessage])
     } finally {
-      setLoading(false)
       abortControllerRef.current = null
     }
   }, [input, loading])

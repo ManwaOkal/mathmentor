@@ -13,6 +13,7 @@ from lib.auth_helpers import get_user_role, is_student, UserRole
 from rag_engine.generator import ResponseGenerator
 from rag_engine.prompts import format_conversational_tutor_prompt
 from rag_engine.document_prompts import format_document_specific_tutor_prompt
+from rag_engine.finetuned_prompts import format_activity_specific_finetuned_prompt
 from utils.latex_fixer import fix_latex_formatting
 
 router = APIRouter(prefix="/api/student", tags=["student"])
@@ -251,21 +252,25 @@ def sync_classroom_activities_for_student(supabase, student_id: str, classroom_i
                             activity_question_counts[activity_id] = len(questions_result.data) if questions_result.data else 0
         
         # 3. Activities linked via metadata/settings (fallback for conversational activities)
-        all_activities_result = supabase.table('learning_activities').select('activity_id, metadata, settings, activity_type').execute()
-        metadata_activity_ids = []
-        if all_activities_result.data:
-            for act in all_activities_result.data:
-                metadata = act.get('metadata') or act.get('settings') or {}
-                if metadata.get('classroom_id') == classroom_id:
-                    if act['activity_id'] not in direct_activity_ids and act['activity_id'] not in doc_activity_ids:
-                        activity_id = act['activity_id']
-                        metadata_activity_ids.append(activity_id)
-                        # Get question count if conversational (usually 0)
-                        if act.get('activity_type') == 'conversational' or act.get('metadata', {}).get('conversational') or act.get('settings', {}).get('conversational'):
-                            activity_question_counts[activity_id] = None
-                        else:
-                            questions_result = supabase.table('activity_questions').select('question_id').eq('activity_id', activity_id).execute()
-                            activity_question_counts[activity_id] = len(questions_result.data) if questions_result.data else 0
+        # Only check if we haven't found activities via other methods (performance optimization)
+        if not direct_activity_ids and not doc_activity_ids:
+            all_activities_result = supabase.table('learning_activities').select('activity_id, metadata, settings, activity_type').limit(500).execute()
+            metadata_activity_ids = []
+            if all_activities_result.data:
+                for act in all_activities_result.data:
+                    metadata = act.get('metadata') or act.get('settings') or {}
+                    if metadata.get('classroom_id') == classroom_id:
+                        if act['activity_id'] not in direct_activity_ids and act['activity_id'] not in doc_activity_ids:
+                            activity_id = act['activity_id']
+                            metadata_activity_ids.append(activity_id)
+                            # Get question count if conversational (usually 0)
+                            if act.get('activity_type') == 'conversational' or act.get('metadata', {}).get('conversational') or act.get('settings', {}).get('conversational'):
+                                activity_question_counts[activity_id] = None
+                            else:
+                                questions_result = supabase.table('activity_questions').select('question_id').eq('activity_id', activity_id).execute()
+                                activity_question_counts[activity_id] = len(questions_result.data) if questions_result.data else 0
+        else:
+            metadata_activity_ids = []
         
         # Combine all activity IDs
         all_activity_ids = list(set(direct_activity_ids + doc_activity_ids + metadata_activity_ids))
@@ -314,86 +319,104 @@ def sync_classroom_activities_for_student(supabase, student_id: str, classroom_i
 async def get_student_activities(
     classroom_id: Optional[str] = None,
     status: Optional[str] = None,
+    sync: Optional[str] = None,  # Query param comes as string, check for 'true'
     user: dict = Depends(get_current_student)
 ):
-    """Get activities assigned to the student. Automatically syncs missing activities for existing students."""
+    """Get activities assigned to the student. Optionally syncs missing activities."""
     try:
         supabase = get_supabase_client()
         
-        # If classroom_id is provided, sync activities for this student in this classroom
-        # This ensures existing students get activities they're missing
-        if classroom_id:
+        # Only sync if explicitly requested (for initial load or manual refresh)
+        should_sync = sync and sync.lower() == 'true'
+        if classroom_id and should_sync:
             try:
-                # Check if student is enrolled in this classroom
-                enrollment_check = supabase.table('student_enrollments').select('enrollment_id').eq('classroom_id', classroom_id).eq('student_id', user['id']).execute()
+                enrollment_check = supabase.table('student_enrollments').select('enrollment_id').eq('classroom_id', classroom_id).eq('student_id', user['id']).single().execute()
                 if enrollment_check.data:
-                    # Sync activities for this classroom
                     synced_count = sync_classroom_activities_for_student(supabase, user['id'], classroom_id)
                     if synced_count > 0:
                         print(f"Auto-synced {synced_count} missing activities for student {user['id']} in classroom {classroom_id}")
             except Exception as sync_error:
-                # Log but don't fail - continue to fetch activities
                 print(f"Warning: Failed to sync activities: {sync_error}")
         
-        # Build query with proper joins
-        query = supabase.table('student_activities').select(
-            '*, learning_activities(*, teacher_documents(classroom_id))'
-        ).eq('student_id', user['id'])
-        
+        # Optimized query - fetch only what we need
         if classroom_id:
-            # Filter by classroom - activities can be linked via:
-            # 1. document_id -> teacher_documents.classroom_id (document-based activities)
-            # 2. learning_activities.classroom_id (conversational activities)
-            
-            # Get document IDs for this classroom
+            # Get document IDs for this classroom (single query)
             docs_result = supabase.table('teacher_documents').select('document_id').eq('classroom_id', classroom_id).execute()
             doc_ids = [d['document_id'] for d in (docs_result.data or [])]
             
-            # Get activity IDs linked directly to classroom (conversational activities)
-            # Try to get activities with classroom_id column first
+            # Get activity IDs for this classroom (single query)
             try:
                 classroom_activities_result = supabase.table('learning_activities').select('activity_id').eq('classroom_id', classroom_id).execute()
                 classroom_activity_ids = [a['activity_id'] for a in (classroom_activities_result.data or [])]
             except:
-                # If classroom_id column doesn't exist, check metadata
-                classroom_activities_result = supabase.table('learning_activities').select('activity_id, metadata, settings').execute()
+                # Fallback: check metadata (but limit to recent activities for performance)
+                classroom_activities_result = supabase.table('learning_activities').select('activity_id, metadata, settings').limit(1000).execute()
                 classroom_activity_ids = []
                 for act in (classroom_activities_result.data or []):
                     metadata = act.get('metadata') or act.get('settings') or {}
                     if metadata.get('classroom_id') == classroom_id:
                         classroom_activity_ids.append(act['activity_id'])
             
-            # Build filter: activities with document_id in classroom OR activity_id in classroom activities
-            # Since Supabase doesn't easily support OR with different columns, fetch all and filter
-            if doc_ids or classroom_activity_ids:
-                # Fetch all student activities for this student
-                temp_query = supabase.table('student_activities').select(
-                    '*, learning_activities(*, teacher_documents(classroom_id))'
-                ).eq('student_id', user['id'])
-                
-                if status:
-                    temp_query = temp_query.eq('status', status)
-                
-                result = temp_query.execute()
-                all_activities = result.data if result.data else []
-                
-                # Filter by classroom: include if document_id matches OR activity_id matches
-                activities = []
-                for act in all_activities:
-                    activity_id = act.get('activity_id')
-                    document_id = act.get('document_id')
-                    
-                    # Include if:
-                    # 1. Has document_id and it's in doc_ids (document-based), OR
-                    # 2. activity_id is in classroom_activity_ids (conversational)
-                    if (document_id and document_id in doc_ids) or \
-                       (activity_id and activity_id in classroom_activity_ids):
-                        activities.append(act)
-            else:
-                # No activities in this classroom
+            if not doc_ids and not classroom_activity_ids:
                 return {"activities": []}
+            
+            # Build optimized query with filters
+            query = supabase.table('student_activities').select(
+                'student_activity_id, activity_id, document_id, status, score, feedback, started_at, completed_at, total_questions, learning_activities(title, description, activity_type)'
+            ).eq('student_id', user['id'])
+            
+            # Filter by activity_id if we have classroom activity IDs
+            if classroom_activity_ids:
+                query = query.in_('activity_id', classroom_activity_ids[:100])  # Limit to prevent query size issues
+            
+            # Filter by document_id if we have document IDs
+            if doc_ids:
+                if classroom_activity_ids:
+                    # Use OR logic: fetch both sets and combine
+                    doc_query = supabase.table('student_activities').select(
+                        'student_activity_id, activity_id, document_id, status, score, feedback, started_at, completed_at, total_questions, learning_activities(title, description, activity_type)'
+                    ).eq('student_id', user['id']).in_('document_id', doc_ids[:100])
+                    
+                    if status:
+                        doc_query = doc_query.eq('status', status)
+                    
+                    doc_result = doc_query.execute()
+                    doc_activities = doc_result.data if doc_result.data else []
+                    
+                    if status:
+                        query = query.eq('status', status)
+                    
+                    result = query.execute()
+                    activities = result.data if result.data else []
+                    
+                    # Combine and deduplicate
+                    seen_ids = set()
+                    combined = []
+                    for act in activities + doc_activities:
+                        act_id = act.get('student_activity_id')
+                        if act_id and act_id not in seen_ids:
+                            seen_ids.add(act_id)
+                            combined.append(act)
+                    activities = combined
+                else:
+                    # Only document-based activities
+                    query = query.in_('document_id', doc_ids[:100])
+                    if status:
+                        query = query.eq('status', status)
+                    result = query.execute()
+                    activities = result.data if result.data else []
+            else:
+                # Only classroom activity IDs
+                if status:
+                    query = query.eq('status', status)
+                result = query.execute()
+                activities = result.data if result.data else []
         else:
             # No classroom filter - get all activities for student
+            query = supabase.table('student_activities').select(
+                'student_activity_id, activity_id, document_id, status, score, feedback, started_at, completed_at, total_questions, learning_activities(title, description, activity_type)'
+            ).eq('student_id', user['id'])
+            
             if status:
                 query = query.eq('status', status)
             
@@ -402,8 +425,8 @@ async def get_student_activities(
         
         # Sort activities: in_progress/completed first, then by started_at or completed_at
         activities.sort(key=lambda x: (
-            0 if x.get('status') in ['in_progress', 'completed'] else 1,  # Active activities first
-            x.get('started_at') or x.get('completed_at') or '',  # Then by timestamp
+            0 if x.get('status') in ['in_progress', 'completed'] else 1,
+            x.get('started_at') or x.get('completed_at') or '',
         ), reverse=True)
         
         return {"activities": activities}
@@ -692,11 +715,70 @@ async def conversational_tutor(
                 total_questions=len(questions) if questions else 0
             )
         
+        # CRITICAL: If student response is just "okay", "ok", "yes", "sure", etc., 
+        # don't change phase - these are acknowledgments, not phase triggers
+        if request.student_response:
+            response_lower = request.student_response.lower().strip()
+            casual_acknowledgments = ['okay', 'ok', 'yes', 'yep', 'yeah', 'sure', 'alright', 'got it', 'i see', 'i understand']
+            if response_lower in casual_acknowledgments:
+                # Don't change phase based on casual acknowledgment
+                # If we're in teaching phase, stay in teaching phase
+                # If we're in questioning phase, stay in questioning phase
+                # Only allow phase changes from explicit readiness phrases
+                pass  # Keep current phase
+        
         # Get current question if in questioning phase
         current_question = None
         if teaching_phase == "questioning" and request.current_question_index is not None:
             if questions and 0 <= request.current_question_index < len(questions):
                 current_question = questions[request.current_question_index]
+        
+        # Check if student's answer is correct (for questioning phase)
+        is_answer_correct = False
+        if teaching_phase == "questioning" and current_question:
+            correct_answer = current_question.get('correct_answer')
+            
+            # Get student response from request or last user message in conversation
+            student_response = request.student_response.strip() if request.student_response else ""
+            if not student_response and request.conversation_history:
+                # Get the last user message
+                for msg in reversed(request.conversation_history):
+                    if msg.get('role') == 'user':
+                        student_response = msg.get('content', '').strip()
+                        break
+            
+            if correct_answer and student_response:
+                import re
+                # Normalize both answers for comparison
+                correct_normalized = str(correct_answer).strip().lower()
+                student_normalized = student_response.lower()
+                
+                # Remove common words/phrases that don't affect correctness
+                student_normalized = re.sub(r'\b(the answer is|answer|equals|is|x\s*=\s*)', '', student_normalized).strip()
+                
+                # Check for direct match
+                if student_normalized == correct_normalized:
+                    is_answer_correct = True
+                else:
+                    # Extract numbers from both
+                    correct_numbers = re.findall(r'-?\d+\.?\d*', correct_normalized)
+                    student_numbers = re.findall(r'-?\d+\.?\d*', student_normalized)
+                    
+                    if correct_numbers:
+                        correct_num = correct_numbers[0]
+                        # Check various formats
+                        # Direct number match
+                        if correct_num in student_numbers:
+                            is_answer_correct = True
+                        # "x=3" or "x = 3" format
+                        elif re.search(rf'x\s*=\s*{re.escape(correct_num)}', student_normalized):
+                            is_answer_correct = True
+                        # "the answer is 3" format
+                        elif re.search(rf'(answer|equals|is)\s+{re.escape(correct_num)}', student_normalized):
+                            is_answer_correct = True
+                        # Check if student response ends with the correct number
+                        elif student_numbers and student_numbers[-1] == correct_num:
+                            is_answer_correct = True
         
         # Generate conversational response
         generator = ResponseGenerator()
@@ -736,6 +818,112 @@ async def conversational_tutor(
                 )
             else:
                 # Fallback to regular prompt if segments not available
+                activity_metadata = activity.get('metadata', {})
+                settings = activity.get('settings', {})
+                teaching_style = settings.get('teaching_style') or activity_metadata.get('teaching_style') or 'guided'
+                difficulty = activity.get('difficulty', 'intermediate')
+                
+                # Get all teaching examples for this teacher (applies to all activities)
+                teaching_examples = []
+                try:
+                    teacher_id = activity.get('teacher_id')
+                    
+                    # Get all examples for this teacher (applies globally to all activities)
+                    examples_result = supabase.table('teaching_examples').select('*').eq('teacher_id', teacher_id).order('created_at', desc=True).limit(10).execute()
+                    teaching_examples = examples_result.data if examples_result.data else []
+                except Exception as e:
+                    print(f"Error fetching teaching examples: {e}")
+                    teaching_examples = []
+                
+                # Use activity-specific fine-tuning if examples are available
+                if teaching_examples:
+                    topic = settings.get('topic') or activity_metadata.get('topic') or activity.get('title', '')
+                    
+                    # Extract student input
+                    student_input = request.student_response
+                    if not student_input and request.conversation_history:
+                        for msg in reversed(request.conversation_history):
+                            if msg.get('role') == 'user':
+                                student_input = msg.get('content', '')
+                                break
+                    if not student_input:
+                        student_input = ''
+                    
+                    prompt = format_activity_specific_finetuned_prompt(
+                        student_input=student_input,
+                        teaching_examples=teaching_examples,
+                        activity_id=request.activity_id,
+                        activity_title=activity.get('title', 'Math Activity'),
+                        activity_description=activity.get('description', ''),
+                        teaching_style=teaching_style,
+                        difficulty=difficulty,
+                        topic=topic,
+                        conversation_history=request.conversation_history,
+                        teaching_phase=teaching_phase
+                    )
+                else:
+                    # Fallback to regular prompt without fine-tuning
+                    prompt = format_conversational_tutor_prompt(
+                        activity_title=activity.get('title', 'Math Activity'),
+                        activity_description=activity.get('description', ''),
+                        questions=questions,
+                        conversation_history=request.conversation_history,
+                        current_question_index=request.current_question_index,
+                        student_response=request.student_response,
+                        current_question=current_question,
+                        teaching_phase=teaching_phase,
+                        teaching_style=teaching_style,
+                        difficulty=difficulty
+                    )
+        else:
+            # Use regular prompt for non-document-based activities
+            activity_metadata = activity.get('metadata', {})
+            settings = activity.get('settings', {})
+            teaching_style = settings.get('teaching_style') or activity_metadata.get('teaching_style') or 'guided'
+            difficulty = activity.get('difficulty', 'intermediate')
+            
+            # Get all teaching examples for this teacher (applies to all activities)
+            teaching_examples = []
+            try:
+                teacher_id = activity.get('teacher_id')
+                
+                # Get all examples for this teacher (applies globally to all activities)
+                examples_result = supabase.table('teaching_examples').select('*').eq('teacher_id', teacher_id).order('created_at', desc=True).limit(10).execute()
+                teaching_examples = examples_result.data if examples_result.data else []
+            except Exception as e:
+                print(f"Error fetching teaching examples: {e}")
+                teaching_examples = []
+            
+            # Use activity-specific fine-tuning if examples are available
+            if teaching_examples:
+                # Get topic from settings/metadata/title
+                topic = settings.get('topic') or activity_metadata.get('topic') or activity.get('title', '')
+                
+                # Extract student input from conversation history or student response
+                student_input = request.student_response
+                if not student_input and request.conversation_history:
+                    # Get the last user message
+                    for msg in reversed(request.conversation_history):
+                        if msg.get('role') == 'user':
+                            student_input = msg.get('content', '')
+                            break
+                if not student_input:
+                    student_input = ''
+                
+                prompt = format_activity_specific_finetuned_prompt(
+                    student_input=student_input,
+                    teaching_examples=teaching_examples,
+                    activity_id=request.activity_id,
+                    activity_title=activity.get('title', 'Math Activity'),
+                    activity_description=activity.get('description', ''),
+                    teaching_style=teaching_style,
+                    difficulty=difficulty,
+                    topic=topic,
+                    conversation_history=request.conversation_history,
+                    teaching_phase=teaching_phase
+                )
+            else:
+                # Fallback to regular prompt without fine-tuning
                 prompt = format_conversational_tutor_prompt(
                     activity_title=activity.get('title', 'Math Activity'),
                     activity_description=activity.get('description', ''),
@@ -744,25 +932,20 @@ async def conversational_tutor(
                     current_question_index=request.current_question_index,
                     student_response=request.student_response,
                     current_question=current_question,
-                    teaching_phase=teaching_phase
+                    teaching_phase=teaching_phase,
+                    teaching_style=teaching_style,
+                    difficulty=difficulty
                 )
-        else:
-            # Use regular prompt for non-document-based activities
-            prompt = format_conversational_tutor_prompt(
-                activity_title=activity.get('title', 'Math Activity'),
-                activity_description=activity.get('description', ''),
-                questions=questions,
-                conversation_history=request.conversation_history,
-                current_question_index=request.current_question_index,
-                student_response=request.student_response,
-                current_question=current_question,
-                teaching_phase=teaching_phase
-            )
+        
+        # Add explicit correctness instruction to prompt if answer is correct
+        if is_answer_correct and teaching_phase == "questioning":
+            correctness_instruction = "\n\n**CRITICAL**: The student's answer is CORRECT. Acknowledge this immediately with praise (e.g., 'That's correct!', 'Exactly right!', 'Perfect!') and move forward. DO NOT ask them to double-check, verify, or confirm - they already got it right. Either move to the next question or provide an extension."
+            prompt = prompt + correctness_instruction
         
         ai_response = generator.generate_response(
             prompt=prompt,
             temperature=0.85,  # Higher temperature for more creative, engaging, and natural responses
-            max_tokens=4000  # Much higher token limit for comprehensive, detailed, thorough responses - FULL POWER!
+            max_tokens=3000  # Reduced by 25% for faster response times
         )
         
         # Post-process: Fix LaTeX formatting issues (fixes buggy patterns like $m = $\frac{...}${...}$)
@@ -806,6 +989,21 @@ async def conversational_tutor(
             # Pattern: \pm (plus-minus) - wrap if not already wrapped
             text = re.sub(r'(?<!\$)(\\pm)(?!\$)', r'$\1$', text)
             
+            # Pattern: \times (multiplication) - wrap expressions with \times
+            # Match patterns like: 2\times2, A\times B, 2\times2 matrix, etc.
+            # First, protect already-wrapped expressions to avoid double-wrapping
+            # Then match: number\timesnumber, letter\timesletter, number\timesletter, letter\timesnumber
+            text = re.sub(r'(?<!\$)(\d+)\\times(\d+)', r'$\1\\times\2$', text)
+            text = re.sub(r'(?<!\$)([A-Za-z])\\times([A-Za-z])', r'$\1\\times\2$', text)
+            text = re.sub(r'(?<!\$)(\d+)\\times([A-Za-z])', r'$\1\\times\2$', text)
+            text = re.sub(r'(?<!\$)([A-Za-z])\\times(\d+)', r'$\1\\times\2$', text)
+            # Catch more complex patterns like "2\times2 matrix" - wrap just the math part
+            text = re.sub(r'(?<!\$)([^\s$]+)\\times([^\s$]+)(?=\s|$|\.|,|;|:|\))', r'$\1\\times\2$', text)
+            
+            # Pattern: \cdot (dot multiplication) - similar patterns
+            text = re.sub(r'(?<!\$)(\d+)\\cdot(\d+)', r'$\1\\cdot\2$', text)
+            text = re.sub(r'(?<!\$)([A-Za-z])\\cdot([A-Za-z])', r'$\1\\cdot\2$', text)
+            
             # Pattern: Other common LaTeX commands
             text = re.sub(r'(?<!\$)(\\[a-zA-Z]+\{[^}]*\})(?!\$)', r'$\1$', text)
             
@@ -842,12 +1040,30 @@ async def conversational_tutor(
         if teaching_phase == "questioning":
             # If student got it right or we're moving forward, increment
             # This is a simple heuristic - you might want to make it smarter
-            if request.student_response and any(word in request.student_response.lower() for word in ['correct', 'right', 'yes', 'got it']):
-                next_question_index = (request.current_question_index or 0) + 1 if request.current_question_index is not None else 0
+            # Only trigger on explicit confirmation, not casual "yes" or "okay"
+            if request.student_response:
+                response_lower = request.student_response.lower().strip()
+                # More specific triggers - avoid casual "yes" or "okay"
+                explicit_confirmations = ['correct', 'right', 'got it', 'i got it', 'that\'s right', 'exactly']
+                if any(phrase in response_lower for phrase in explicit_confirmations):
+                    next_question_index = (request.current_question_index or 0) + 1 if request.current_question_index is not None else 0
         elif teaching_phase == "ready_check":
-            # If student says ready, move to questioning phase
-            if request.student_response and any(word in request.student_response.lower() for word in ['ready', 'yes', 'start']):
-                next_question_index = 0
+            # Only trigger on explicit readiness phrases, not casual "okay" or "yes"
+            if request.student_response:
+                response_lower = request.student_response.lower().strip()
+                # Explicit readiness phrases - must be clear intent to start questions
+                readiness_phrases = [
+                    'ready', 'i\'m ready', 'i am ready', 'ready to start', 'ready for questions',
+                    'let\'s start', 'let\'s begin', 'start questions', 'begin questions',
+                    'yes, i\'m ready', 'yes, ready', 'yes i\'m ready'
+                ]
+                # Check if response contains a readiness phrase AND is not just casual "okay" or "yes"
+                is_explicit_ready = any(phrase in response_lower for phrase in readiness_phrases)
+                # Don't trigger on standalone "okay", "yes", "ok", "yep" - these are too casual
+                is_casual_response = response_lower in ['okay', 'ok', 'yes', 'yep', 'yeah', 'sure', 'alright']
+                
+                if is_explicit_ready and not is_casual_response:
+                    next_question_index = 0
         
         return {
             "response": processed_response,
@@ -917,14 +1133,97 @@ async def complete_conversational_activity(
             }
         }
         
-        # Add score and feedback if provided
-        if request.score is not None:
-            update_data['score'] = request.score
-        if request.feedback:
+        # Always save score - use provided score or default to 0
+        score_to_save = request.score if request.score is not None else 0
+        # Ensure score is a valid number and explicitly set it
+        try:
+            score_value = round(float(score_to_save), 2)
+            # Ensure score is between 0 and 100
+            score_value = max(0, min(100, score_value))
+            update_data['score'] = score_value
+            print(f"DEBUG: Saving score {score_value} for student_activity_id {student_activity_id}")
+        except (ValueError, TypeError) as e:
+            print(f"ERROR: Invalid score value {score_to_save}: {e}")
+            update_data['score'] = 0
+        
+        # Always save feedback - use provided feedback or generate dynamically using AI
+        if request.feedback and request.feedback.strip():
             update_data['feedback'] = request.feedback
+        else:
+            # Dynamically generate feedback using AI based on conversation and score
+            try:
+                # Get activity details for context
+                activity_result = supabase.table('learning_activities').select('*').eq('activity_id', student_activity_result.data.get('activity_id')).single().execute()
+                activity = activity_result.data if activity_result.data else {}
+                metadata = activity.get('metadata', {})
+                topic = metadata.get('topic', activity.get('title', 'this topic'))
+                difficulty = activity.get('difficulty', 'intermediate')
+                
+                # Format conversation history
+                conversation_text = "\n".join([
+                    f"{msg.get('role', 'user').title()}: {msg.get('content', '')}"
+                    for msg in request.conversation_history[-10:]  # Last 10 messages for context
+                ])
+                
+                # Generate dynamic feedback using AI
+                prompt = f"""Generate personalized, encouraging feedback for a student who completed a math learning activity.
+
+TOPIC: {topic}
+DIFFICULTY: {difficulty}
+STUDENT SCORE: {score_to_save}%
+CONVERSATION SUMMARY:
+{conversation_text}
+
+Generate feedback that:
+1. Acknowledges their effort and specific things they did well
+2. Provides constructive guidance based on their score and conversation
+3. Suggests specific next steps for improvement
+4. Is encouraging and supportive
+5. Is personalized to their actual work in the conversation
+
+Keep it concise (2-3 sentences) but meaningful. Reference specific aspects of their work if possible.
+
+Feedback:"""
+                
+                generator = ResponseGenerator()
+                ai_feedback = generator.generate_response(
+                    prompt=prompt,
+                    temperature=0.7,
+                    max_tokens=200
+                )
+                
+                # Clean up the feedback (remove quotes if wrapped)
+                ai_feedback = ai_feedback.strip().strip('"').strip("'")
+                update_data['feedback'] = ai_feedback if ai_feedback else f"Activity completed with a score of {score_to_save}%. Continue practicing to improve your understanding."
+                
+            except Exception as e:
+                # Fallback: generate simple feedback if AI generation fails
+                print(f"Error generating dynamic feedback: {e}")
+                # Still generate context-aware feedback without AI
+                conversation_summary = " ".join([
+                    msg.get('content', '')[:50] 
+                    for msg in request.conversation_history[-3:] 
+                    if msg.get('role') == 'user'
+                ])
+                
+                if score_to_save >= 80:
+                    update_data['feedback'] = f"Excellent work! You demonstrated strong understanding of {topic}. Your score of {score_to_save}% reflects your solid grasp of the concepts."
+                elif score_to_save >= 60:
+                    update_data['feedback'] = f"Good effort! You showed understanding of {topic} with a score of {score_to_save}%. Keep practicing to strengthen your skills."
+                elif score_to_save > 0:
+                    update_data['feedback'] = f"You completed the activity on {topic} with a score of {score_to_save}%. Review the material and try similar problems to improve."
+                else:
+                    update_data['feedback'] = f"Activity on {topic} completed. Focus on practicing problems and demonstrating mathematical work to improve your understanding."
         
         # Save final conversation and mark as completed
-        supabase.table('student_activities').update(update_data).eq('student_activity_id', student_activity_id).execute()
+        print(f"DEBUG: Updating student_activity with data: {update_data}")
+        result = supabase.table('student_activities').update(update_data).eq('student_activity_id', student_activity_id).execute()
+        
+        # Verify the update worked
+        if result.data:
+            print(f"DEBUG: Update successful. Saved score: {result.data[0].get('score')}, feedback: {result.data[0].get('feedback')[:50] if result.data[0].get('feedback') else 'None'}...")
+        else:
+            print(f"WARNING: Update returned no data")
         
         return {"success": True, "message": "Activity completed"}
     except HTTPException:
@@ -935,7 +1234,8 @@ async def complete_conversational_activity(
 @router.get("/activities/{activity_id}/introduction")
 async def get_activity_introduction(
     activity_id: str,
-    user: dict = Depends(get_current_student)
+    user: dict = Depends(get_current_student),
+    authorization: Optional[str] = Header(None)
 ):
     """Get AI introduction for an activity"""
     try:
@@ -958,147 +1258,57 @@ async def get_activity_introduction(
         metadata = activity.get('metadata', {})
         settings = activity.get('settings', {})
         
-        # Merge metadata and settings (settings takes precedence if both exist)
-        activity_info = {**metadata, **settings}
-        
         # Get activity details from various possible locations
-        # Check settings first (where conversational activities store data), then metadata, then direct fields
         topic = settings.get('topic') or metadata.get('topic') or activity.get('title', 'this topic')
-        teaching_style = settings.get('teaching_style') or metadata.get('teaching_style') or 'guided'
         
-        # Get description - prioritize the actual description field (what teacher wrote)
-        description = activity.get('description', '')
-        # If description is empty or is the default fallback, don't use it
-        default_description = f"Conversational learning about {topic}"
-        if not description or description.strip() == '' or description == default_description:
-            description = ''  # Don't use default/empty descriptions
-        
+        # Get learning objectives
         learning_objectives = activity.get('learning_objectives', []) or settings.get('learning_objectives', []) or metadata.get('learning_objectives', [])
-        difficulty = activity.get('difficulty', 'intermediate')
         
-        # Build activity overview text with actual teacher-provided information
-        # Always include title - it's what the teacher specifically wrote
-        activity_title = activity.get('title', 'Math Activity')
-        activity_overview_parts = [f"**Activity Title:** {activity_title}"]
-        
-        # Add topic if it's different from title (topic is usually more specific)
-        if topic and topic.strip() and topic != activity_title:
-            activity_overview_parts.append(f"**Topic:** {topic}")
-        
-        # Only add description if it's meaningful (not empty and not the default)
-        if description and description.strip() and description != default_description:
-            activity_overview_parts.append(f"**Description:** {description}")
-        
-        # Add learning objectives if available
+        # Format learning objectives summary
         if learning_objectives:
             if isinstance(learning_objectives, list) and len(learning_objectives) > 0:
-                objectives_text = ', '.join([str(obj) for obj in learning_objectives[:3]])  # Limit to first 3
-                activity_overview_parts.append(f"**Learning goals:** {objectives_text}")
+                learning_objective_summary = ', '.join([str(obj) for obj in learning_objectives[:3]])  # Limit to first 3
             elif isinstance(learning_objectives, str):
-                activity_overview_parts.append(f"**Learning goals:** {learning_objectives}")
+                learning_objective_summary = learning_objectives
+            else:
+                learning_objective_summary = topic  # Fallback to topic if no objectives
+        else:
+            learning_objective_summary = topic  # Fallback to topic if no objectives
         
-        activity_overview = '\n'.join(activity_overview_parts)
+        # Get activity title
+        activity_title = activity.get('title', 'Math Activity')
         
-        # Always ensure we have at least title and topic
-        if len(activity_overview_parts) <= 1:
-            activity_overview = f"**Activity Title:** {activity_title}\n**Topic:** {topic}"
+        # Get student name from JWT token user_metadata and extract first name only
+        student_first_name = 'Student'  # Default fallback
+        try:
+            if authorization and authorization.startswith("Bearer "):
+                token = authorization.replace("Bearer ", "")
+                from lib.jwt_verify import verify_supabase_token
+                user_info = verify_supabase_token(token)
+                if user_info:
+                    user_metadata = user_info.get('user_metadata', {})
+                    # Try to get name from user_metadata
+                    full_name = user_metadata.get('name') or user_metadata.get('full_name') or user_metadata.get('display_name')
+                    # Extract first name only (split by space and take first part)
+                    if full_name:
+                        student_first_name = full_name.split()[0].strip()
+                    # If no name in metadata, use email username
+                    if not student_first_name or student_first_name == '':
+                        email = user_info.get('email') or user.get('email', '')
+                        if email:
+                            student_first_name = email.split('@')[0].capitalize()
+        except Exception as e:
+            # Fallback: use email username
+            email = user.get('email', '')
+            if email:
+                student_first_name = email.split('@')[0].capitalize()
         
-        # Required starting phrase
-        required_start = "Hi! My name is MathMentor, your AI math tutor."
+        # Ensure we have a valid name
+        if not student_first_name or student_first_name == '':
+            student_first_name = 'Student'
         
-        # Generate introduction
-        prompt = f"""You are MathMentor, an AI math tutor. Create a welcoming introduction for a learning session.
-
-TEACHER'S ACTIVITY INFORMATION (USE THIS EXACTLY - DO NOT MAKE UP DATA):
-{activity_overview}
-
-ADDITIONAL CONTEXT:
-- Teaching Style: {teaching_style}
-- Difficulty Level: {difficulty}
-- Main Topic: {topic}
-
-CRITICAL REQUIREMENT: You MUST start your introduction EXACTLY with these words: {required_start}
-
-Create an introduction that:
-1. MUST start with EXACTLY: {required_start}
-2. Then IMMEDIATELY mention the specific activity: "{activity_title}"
-3. Explain what this activity is about - use the Activity Title and Topic from above
-4. If there's a description, briefly summarize what the teacher wants students to learn
-5. Mention that you'll help them learn about {topic} using {teaching_style} teaching style
-6. Set positive expectations and make them feel comfortable to ask questions
-
-FORMAT REQUIREMENTS:
-- Start with: {required_start}
-- Do NOT use "Welcome" as the first word
-- Do NOT say "I'm your AI math tutor" without first saying "Hi! My name is MathMentor"
-- MUST mention the specific activity title: "{activity_title}"
-- MUST reference what the activity is about (use the Activity Title and Topic from above)
-- Do NOT use generic phrases like "master mathematical concepts through conversation"
-- Be SPECIFIC about what they'll learn (use the activity title and topic)
-- Keep it concise and welcoming (3-4 sentences)
-- Use $...$ for math notation if needed
-
-EXAMPLE OF GOOD INTRODUCTION:
-{required_start} Your teacher has planned this activity: "{activity_title}" to help you learn about {topic}. We'll explore [specific concepts from the title/topic] together, and I'll guide you through understanding [key aspects]. Feel free to ask questions anytime!
-
-Your response MUST begin with: {required_start} and MUST mention "{activity_title}" specifically."""
-
-        generator = ResponseGenerator()
-        introduction = generator.generate_response(
-            prompt=prompt,
-            temperature=0.5,  # Lower temperature for more consistent output
-            max_tokens=400
-        )
-        
-        # Post-process to ensure it starts correctly and includes activity title
-        introduction = introduction.strip()
-        activity_title = activity.get('title', '')
-        
-        # Ensure it starts correctly
-        if not introduction.startswith("Hi! My name is MathMentor"):
-            # If it doesn't start correctly, clean it up
-            if introduction.lower().startswith("welcome"):
-                # Remove "Welcome" and any following newlines/spaces
-                introduction = introduction.replace("Welcome", "", 1).strip()
-                introduction = introduction.replace("I'm your", "", 1).strip()
-                introduction = introduction.replace("AI math tutor", "", 1).strip()
-                introduction = introduction.replace("I'm here", "", 1).strip()
-                # Clean up any double spaces or newlines
-                introduction = re.sub(r'\n+', ' ', introduction)
-                introduction = re.sub(r'\s+', ' ', introduction).strip()
-            
-            # Prepend the required start if not present
-            if not introduction.startswith("Hi! My name is MathMentor"):
-                introduction = f"{required_start} {introduction}"
-        
-        # Ensure activity title is mentioned (if it's not generic)
-        if activity_title and activity_title != "Math Activity" and activity_title.lower() not in introduction.lower():
-            # Check if it mentions generic phrases that should be replaced
-            generic_phrases = [
-                "master mathematical concepts through conversation",
-                "help you master mathematical concepts",
-                "learn mathematical concepts",
-                "this lesson to help you master"
-            ]
-            
-            has_generic = any(phrase in introduction.lower() for phrase in generic_phrases)
-            
-            if has_generic or activity_title.lower() not in introduction.lower():
-                # Insert activity title mention after the greeting
-                # Find where to insert it (after "your AI math tutor")
-                tutor_mention = "your AI math tutor"
-                if tutor_mention in introduction:
-                    parts = introduction.split(tutor_mention, 1)
-                    if len(parts) == 2:
-                        # Insert activity mention
-                        introduction = f"{parts[0]}{tutor_mention}. Your teacher has planned this activity: \"{activity_title}\" to help you learn about {topic}.{parts[1]}"
-                    else:
-                        # Fallback: add after required start
-                        introduction = f"{required_start} Your teacher has planned this activity: \"{activity_title}\" to help you learn about {topic}. {introduction.replace(required_start, '').strip()}"
-                else:
-                    # Fallback: add after required start
-                    intro_without_start = introduction.replace(required_start, '').strip()
-                    introduction = f"{required_start} Your teacher has planned this activity: \"{activity_title}\" to help you learn about {topic}. {intro_without_start}"
+        # Format introduction as enthusiastic single paragraph
+        introduction = f"Hi {student_first_name}! I'm MathMentor, your AI math tutor. I've been programmed by your teacher to teach you using their specific methods and instructions. Your teacher has planned {activity_title} to help you practice {learning_objective_summary}. Take your time, try things out, and don't worry about getting everything right the first time - this activity is here to help you learn! When you're ready, let's begin!"
         
         return {"introduction": introduction}
     except HTTPException:
@@ -1128,22 +1338,36 @@ async def get_phase_response(
         
         activity = activity_result.data
         metadata = activity.get('metadata', {})
-        topic = metadata.get('topic', activity.get('title', 'this topic'))
-        teaching_style = metadata.get('teaching_style', 'guided')
+        settings = activity.get('settings', {})
+        
+        # Get topic from settings (where conversational activities store it), then metadata, then title
+        topic = settings.get('topic') or metadata.get('topic') or activity.get('title', 'this topic')
+        teaching_style = settings.get('teaching_style') or metadata.get('teaching_style') or 'guided'
         difficulty = activity.get('difficulty', 'intermediate')
         
-        # Get relevant teaching examples
+        # Get teacher's description - this is what the teacher wants the AI to teach
+        description = activity.get('description', '')
+        # If description is empty or is a default fallback, don't use it
+        default_description = f"Conversational learning about {topic}"
+        if not description or description.strip() == '' or description.strip() == default_description:
+            description = None
+        
+        # Get all teaching examples for this teacher (applies to all activities)
+        teaching_examples = []
         try:
             teacher_id = activity.get('teacher_id')
-            examples_result = supabase.table('teaching_examples').select('*').eq('teacher_id', teacher_id).order('created_at', desc=True).limit(5).execute()
-            examples = examples_result.data if examples_result.data else []
-        except:
-            examples = []
+            
+            # Get all examples for this teacher (applies globally to all activities)
+            examples_result = supabase.table('teaching_examples').select('*').eq('teacher_id', teacher_id).order('created_at', desc=True).limit(10).execute()
+            teaching_examples = examples_result.data if examples_result.data else []
+        except Exception as e:
+            print(f"Error fetching teaching examples: {e}")
+            teaching_examples = []
         
-        # Filter examples by topic
-        relevant_examples = [ex for ex in examples if topic.lower() in ex.get('topic', '').lower()][:3]
+        # Filter examples by topic (for backward compatibility)
+        relevant_examples = [ex for ex in teaching_examples if topic.lower() in ex.get('topic', '').lower()][:3]
         if not relevant_examples:
-            relevant_examples = examples[:3]
+            relevant_examples = teaching_examples[:3]
         
         # Create phase-specific prompt
         examples_context = ""
@@ -1162,23 +1386,65 @@ AI Response: {ex.get('desired_ai_response', '')}
             for msg in request.conversation_history[-5:]
         ])
         
+        # Define teaching style guidance
+        teaching_style_guidance = {
+            'socratic': 'SOCRATIC STYLE: Ask questions to guide discovery. Don\'t give direct answers - help students think through problems by asking probing questions. Encourage them to explain their reasoning. Example: "What do you think happens when...?" "Why might that be?" "Can you explain your thinking?"',
+            'direct': 'DIRECT STYLE: Explain concepts clearly and directly. Provide clear explanations, definitions, and step-by-step instructions. Be explicit about methods and procedures. Example: "Here\'s how we solve this: First... then... finally..."',
+            'guided': 'GUIDED STYLE: Provide step-by-step guidance with explanations. Break down problems into manageable steps, explain each step, and provide support as needed. Balance between explaining and letting students work. Example: "Let\'s work through this together. First, we need to..."',
+            'discovery': 'DISCOVERY STYLE: Let students explore and discover concepts themselves. Provide minimal guidance, ask open-ended questions, and let them experiment. Guide them when stuck but encourage independent thinking. Example: "Try working with this and see what patterns you notice..."',
+            'teacher': 'TEACHER STYLE: Act as a traditional teacher who listens to student needs and requests. Explain concepts step-by-step in a clear, structured manner. After explaining each step or concept, ask "Do you understand?" or "Does that make sense?" and wait for confirmation before proceeding. Give students opportunities to answer questions and demonstrate understanding. Be patient, encouraging, and responsive to what the student wants to learn. Example: "Let me explain this step by step. First, [explanation]. Does that make sense? [Wait for response]. Good! Now, [next step]. Can you try explaining this back to me?"'
+        }
+        
+        # Define difficulty level guidance
+        difficulty_guidance = {
+            'beginner': 'BEGINNER LEVEL: Use simple language, basic examples, and fundamental concepts. Avoid advanced terminology. Break everything into very small steps. Use concrete examples and analogies. Be very patient and encouraging.',
+            'intermediate': 'INTERMEDIATE LEVEL: Use standard mathematical language and notation. Include both basic and moderately complex examples. Balance between explanation and practice. Use appropriate technical terms.',
+            'advanced': 'ADVANCED LEVEL: Use precise mathematical language and notation. Include complex examples and applications. Can move faster through concepts. Expect deeper understanding and abstract thinking.'
+        }
+        
+        style_instruction = teaching_style_guidance.get(teaching_style, teaching_style_guidance['guided'])
+        difficulty_instruction = difficulty_guidance.get(difficulty, difficulty_guidance['intermediate'])
+        
         if request.current_phase == 'introduction':
+            teacher_instructions = f"\n\nTEACHER'S INSTRUCTIONS (FOLLOW THESE EXACTLY):\n{description}\n" if description else ""
             prompt = f"""You are starting a learning session about: {topic}
 
-Teaching Style: {teaching_style}
-Difficulty: {difficulty}
+**CRITICAL - TEACHING STYLE (YOU MUST USE THIS EXACTLY):**
+{style_instruction}
 
+**CRITICAL - DIFFICULTY LEVEL (YOU MUST ADJUST TO THIS):**
+{difficulty_instruction}
+
+{teacher_instructions}
 Create a welcoming introduction that:
 1. Greets the student warmly
-2. Explains what you'll learn together
-3. Sets expectations for the conversation
-4. Makes them feel comfortable to ask questions
+2. **IMPORTANT**: Explain that you've been programmed by their teacher to teach using the teacher's specific methods and instructions
+3. Explains what you'll learn together - use the teacher's instructions above to guide what to teach
+4. Uses the {teaching_style} teaching style as specified
+5. Adjusts complexity to {difficulty} level
+6. Sets expectations for the conversation
+7. Makes them feel comfortable to ask questions
 
-Keep it friendly and inviting!"""
+Keep it friendly, inviting, and BRIEF (2-3 sentences maximum)!"""
         
         elif request.current_phase == 'teach':
+            teacher_instructions = f"""
+TEACHER'S INSTRUCTIONS (THIS IS WHAT YOU MUST TEACH - FOLLOW THESE EXACTLY):
+{description}
+
+CRITICAL: The teacher has specifically instructed you to teach: "{description}"
+Your teaching MUST align with what the teacher wants students to learn. Use this as your primary guide for what concepts to cover, how to explain them, and what examples to use.
+""" if description else ""
+            
             prompt = f"""You are in the TEACHING phase about: {topic}
 
+**CRITICAL - TEACHING STYLE (YOU MUST USE THIS EXACTLY):**
+{style_instruction}
+
+**CRITICAL - DIFFICULTY LEVEL (YOU MUST ADJUST TO THIS):**
+{difficulty_instruction}
+
+{teacher_instructions}
 {examples_context}
 
 CONVERSATION SO FAR:
@@ -1187,18 +1453,37 @@ CONVERSATION SO FAR:
 STUDENT'S LATEST INPUT:
 "{request.student_input}"
 
-Your task: Teach the concept clearly using {teaching_style} style.
-- Explain step-by-step
-- Use examples if helpful
-- Check for understanding
+Your task: Teach the concept clearly.
+- Use {teaching_style} teaching style EXACTLY as specified above - this determines HOW you teach
+- Adjust to {difficulty} difficulty level EXACTLY as specified above - this determines complexity and depth
+- Follow the teacher's instructions above EXACTLY - this is what they want students to learn
+- Explain step-by-step according to what the teacher specified
+- Use examples that align with the teacher's teaching goals and difficulty level
+- Check for understanding using the appropriate style
 - Use $...$ for math notation
 - Keep it conversational
+- Be BRIEF (2-4 sentences maximum)
 
 Respond to continue teaching:"""
         
         elif request.current_phase == 'practice':
+            teacher_instructions = f"""
+TEACHER'S INSTRUCTIONS (REMEMBER WHAT THE TEACHER WANTS STUDENTS TO LEARN):
+{description}
+
+CRITICAL: Guide practice based on what the teacher wants students to learn: "{description}"
+Make sure practice questions and guidance align with the teacher's learning objectives.
+""" if description else ""
+            
             prompt = f"""You are in the PRACTICE phase. The student has learned about {topic}.
 
+**CRITICAL - TEACHING STYLE (YOU MUST USE THIS EXACTLY):**
+{style_instruction}
+
+**CRITICAL - DIFFICULTY LEVEL (YOU MUST ADJUST TO THIS):**
+{difficulty_instruction}
+
+{teacher_instructions}
 {examples_context}
 
 CONVERSATION HISTORY:
@@ -1208,17 +1493,36 @@ STUDENT'S INPUT:
 "{request.student_input}"
 
 Your task: Guide practice without giving answers.
-- Ask questions to check understanding
-- Provide hints if stuck
-- Encourage thinking
-- Connect back to what was taught
+- Use {teaching_style} teaching style EXACTLY as specified above - this determines HOW you guide practice
+- Adjust practice difficulty to {difficulty} level EXACTLY as specified above
+- Focus practice on what the teacher wants students to learn (see instructions above)
+- Ask questions appropriate to the teaching style and difficulty level
+- Provide hints if stuck (style-appropriate)
+- Encourage thinking using the specified teaching style
+- Connect back to what was taught (aligned with teacher's instructions)
 - Assess their approach
+- Be BRIEF (2-3 sentences maximum)
 
 Keep it conversational and supportive:"""
         
         elif request.current_phase == 'evaluate':
+            teacher_instructions = f"""
+TEACHER'S INSTRUCTIONS (EVALUATE BASED ON WHAT THE TEACHER WANTS STUDENTS TO LEARN):
+{description}
+
+CRITICAL: Assess whether the student has learned what the teacher specified: "{description}"
+Your evaluation should focus on whether they understand the concepts the teacher wanted them to learn.
+""" if description else ""
+            
             prompt = f"""You are in the EVALUATION phase. Assess the student's understanding of {topic}.
 
+**CRITICAL - TEACHING STYLE (YOU MUST USE THIS EXACTLY):**
+{style_instruction}
+
+**CRITICAL - DIFFICULTY LEVEL (YOU MUST ADJUST TO THIS):**
+{difficulty_instruction}
+
+{teacher_instructions}
 {examples_context}
 
 CONVERSATION HISTORY:
@@ -1228,17 +1532,22 @@ STUDENT'S INPUT:
 "{request.student_input}"
 
 Your task: Assess understanding through conversation.
-- Ask assessment questions
+- Use {teaching_style} teaching style EXACTLY as specified above - this determines HOW you assess
+- Evaluate at {difficulty} difficulty level EXACTLY as specified above - adjust expectations accordingly
+- Evaluate based on what the teacher wants students to learn (see instructions above)
+- Ask assessment questions appropriate to the teaching style and difficulty level
 - Listen to their explanations
 - Provide constructive feedback
-- Identify gaps in understanding
+- Identify gaps in understanding related to the teacher's learning objectives
 - Prepare to summarize their learning
+- Be BRIEF (2-3 sentences maximum)
 
 Be supportive but honest in assessment:"""
         
         else:
+            teacher_instructions = f"\n\nTEACHER'S INSTRUCTIONS: {description}\n" if description else ""
             prompt = f"""Respond to the student naturally about {topic}.
-
+{teacher_instructions}
 Student: "{request.student_input}"
 
 Response:"""
@@ -1248,7 +1557,7 @@ Response:"""
         response = generator.generate_response(
             prompt=prompt,
             temperature=0.7,
-            max_tokens=1000
+            max_tokens=500  # Reduced for faster response times
         )
         
         # Determine next phase based on conversation length and phase
@@ -1300,43 +1609,133 @@ async def assess_understanding(
         topic = metadata.get('topic', activity.get('title', 'this topic'))
         difficulty = activity.get('difficulty', 'intermediate')
         
+        # Get questions for this activity to check correctness
+        questions_result = supabase.table('activity_questions').select('*').eq('activity_id', request.activity_id).order('created_at').execute()
+        questions = questions_result.data if questions_result.data else []
+        
+        # Extract student answers from conversation and check correctness
+        import re
+        answer_analysis = []
+        for question in questions:
+            question_text = question.get('question_text', '')
+            correct_answer = question.get('correct_answer', '')
+            question_type = question.get('question_type', 'short_answer')
+            
+            if not correct_answer:
+                continue
+            
+            # Search conversation for student's answer to this question
+            student_answer_found = None
+            for msg in reversed(request.conversation_history):
+                if msg.get('role') == 'user':
+                    content = msg.get('content', '').lower()
+                    # Check if this message might be answering the question
+                    # Look for numbers or mathematical expressions
+                    if re.search(r'\d+', content) or any(keyword in content for keyword in ['answer', 'equals', '=', 'x=']):
+                        student_answer_found = msg.get('content', '').strip()
+                        break
+            
+            # Check if answer is correct
+            is_correct = False
+            if student_answer_found and correct_answer:
+                correct_normalized = str(correct_answer).strip().lower()
+                student_normalized = student_answer_found.lower()
+                
+                # Remove common words/phrases
+                student_normalized = re.sub(r'\b(the answer is|answer|equals|is|x\s*=\s*)', '', student_normalized).strip()
+                
+                # Check for direct match
+                if student_normalized == correct_normalized:
+                    is_correct = True
+                else:
+                    # Extract numbers and check
+                    correct_numbers = re.findall(r'-?\d+\.?\d*', correct_normalized)
+                    student_numbers = re.findall(r'-?\d+\.?\d*', student_normalized)
+                    
+                    if correct_numbers:
+                        correct_num = correct_numbers[0]
+                        if correct_num in student_numbers:
+                            is_correct = True
+                        elif re.search(rf'x\s*=\s*{re.escape(correct_num)}', student_normalized):
+                            is_correct = True
+                        elif re.search(rf'(answer|equals|is)\s+{re.escape(correct_num)}', student_normalized):
+                            is_correct = True
+                        elif student_numbers and student_numbers[-1] == correct_num:
+                            is_correct = True
+            
+            answer_analysis.append({
+                'question': question_text[:100],  # Truncate for prompt
+                'correct_answer': correct_answer,
+                'student_answer': student_answer_found or 'No answer provided',
+                'is_correct': is_correct
+            })
+        
+        # Build correctness summary
+        total_questions = len(answer_analysis)
+        correct_count = sum(1 for a in answer_analysis if a['is_correct'])
+        answered_count = sum(1 for a in answer_analysis if a['student_answer'] != 'No answer provided')
+        
+        correctness_summary = ""
+        if answer_analysis:
+            correctness_summary = "\n\n**CRITICAL - ANSWER CORRECTNESS VERIFICATION:**\n"
+            correctness_summary += f"Total questions: {total_questions}\n"
+            correctness_summary += f"Questions answered: {answered_count}\n"
+            correctness_summary += f"Correct answers: {correct_count}\n"
+            correctness_summary += f"Incorrect/unanswered: {total_questions - correct_count}\n\n"
+            correctness_summary += "**VERIFIED ANSWER ANALYSIS:**\n"
+            for i, analysis in enumerate(answer_analysis, 1):
+                status = "✓ CORRECT" if analysis['is_correct'] else ("✗ INCORRECT" if analysis['student_answer'] != 'No answer provided' else "? NOT ANSWERED")
+                correctness_summary += f"Q{i}: {status} - Student said: '{analysis['student_answer'][:50]}' | Correct answer: '{analysis['correct_answer']}'\n"
+            correctness_summary += "\n**CRITICAL**: Use this verified correctness data. Do NOT misdiagnose correct answers as incorrect.\n"
+        
         conversation_text = "\n".join([
             f"{msg.get('role', 'user').title()}: {msg.get('content', '')}"
             for msg in request.conversation_history
         ])
         
-        prompt = f"""Assess a student's understanding from this learning conversation. Be EXTREMELY STRICT - only give scores above 0% if there is clear evidence of actual mathematical work, problem-solving, calculations, or mathematical explanations.
+        prompt = f"""Assess a student's understanding from this learning conversation. Be STRICT but FAIR - give appropriate scores based on actual mathematical work demonstrated AND verified answer correctness.
 
 TOPIC: {topic}
 DIFFICULTY: {difficulty}
 CONVERSATION:
 {conversation_text}
+{correctness_summary}
 
-ANALYSIS CRITERIA (be extremely strict):
-1. Conceptual understanding (0-10) - Only high if they demonstrate understanding through examples, explanations, or solving problems
-2. Application ability (0-10) - Only high if they actually attempt to solve problems or apply concepts
-3. Problem-solving approach (0-10) - Only high if they show working through problems, not just asking questions
-4. Communication of ideas (0-10) - Only high if they explain their mathematical thinking or reasoning
+**CRITICAL ASSESSMENT RULES:**
+1. **FIRST**: Check the "VERIFIED ANSWER ANALYSIS" section above - it shows which answers are CORRECT vs INCORRECT
+2. **NEVER** label a correct answer as incorrect - if the analysis shows "✓ CORRECT", acknowledge it as correct
+3. **NEVER** invent errors that don't exist - only identify actual mistakes shown in the verified analysis
+4. If a student correctly solved a problem (e.g., "4x + 6 = 18" → "x = 3"), acknowledge their correct work
 
-CRITICAL RULES - FOLLOW STRICTLY:
+ANALYSIS CRITERIA:
+1. Conceptual understanding (0-25 points) - Assess based on demonstrations of understanding through examples, explanations, or solving problems
+2. Application ability (0-25 points) - Assess based on attempts to solve problems or apply concepts
+3. Problem-solving approach (0-25 points) - Assess based on working through problems, showing steps, and reasoning
+4. Communication of ideas (0-25 points) - Assess based on explanations of mathematical thinking or reasoning
+
+SCORING GUIDELINES:
 - If conversation is ONLY greetings (hello, hi, thanks) with NO mathematical content: score MUST be 0%
 - If conversation has NO numbers, equations, calculations, problem-solving attempts, or mathematical explanations: score MUST be 0%
 - If they only ask questions without any mathematical work: score 0-20%
-- If they attempt problems but make errors: score 30-60%
-- If they solve problems correctly: score 60-85%
-- If they demonstrate deep understanding with multiple correct solutions: score 85-95%
+- If they attempt problems but make errors: score 30-70% (give credit for attempts and partial understanding)
+- If they solve problems correctly with clear steps (verified in analysis above): score 70-90% (reward correct solutions appropriately)
+- If they demonstrate deep understanding with multiple correct solutions and explanations: score 90-100%
 
-Check for mathematical indicators: numbers, equations, calculations, solving steps, problem attempts, mathematical explanations, formulas, or mathematical reasoning.
+**CRITICAL**: 
+- Use the verified correctness data above - do NOT misdiagnose correct answers
+- If the student got answers correct, acknowledge it in feedback
+- Only identify actual errors shown in the verified analysis
+- Check for mathematical indicators: numbers, equations, calculations, solving steps, problem attempts, mathematical explanations, formulas, or mathematical reasoning
 
 If NO mathematical work is detected (only greetings, casual conversation, or non-mathematical questions), return score: 0
 
-Return JSON: {{"score": 0, "feedback": "No mathematical work demonstrated. Complete activities require solving problems or demonstrating understanding through mathematical work."}}"""
+Return JSON: {{"score": <number 0-100>, "feedback": "<detailed feedback that accurately reflects verified correctness>"}}"""
 
         generator = ResponseGenerator()
         response = generator.generate_response(
             prompt=prompt,
             temperature=0.1,
-            max_tokens=500
+            max_tokens=500  # Increased to allow for correctness analysis
         )
         
         # Try to parse JSON from response
@@ -1348,9 +1747,20 @@ Return JSON: {{"score": 0, "feedback": "No mathematical work demonstrated. Compl
             if json_start >= 0 and json_end > json_start:
                 assessment = json.loads(response[json_start:json_end])
             else:
-                assessment = {"score": 75, "feedback": "Good progress shown in conversation."}
-        except:
-            assessment = {"score": 75, "feedback": "Good progress shown in conversation."}
+                # Fallback: calculate score based on correctness
+                base_score = (correct_count / total_questions * 100) if total_questions > 0 else 50
+                assessment = {
+                    "score": int(base_score),
+                    "feedback": f"Answered {answered_count} of {total_questions} questions. {correct_count} correct. {'Good work on the problems you solved correctly!' if correct_count > 0 else 'Keep practicing to improve.'}"
+                }
+        except Exception as e:
+            print(f"Error parsing assessment JSON: {e}")
+            # Fallback: calculate score based on correctness
+            base_score = (correct_count / total_questions * 100) if total_questions > 0 else 50
+            assessment = {
+                "score": int(base_score),
+                "feedback": f"Answered {answered_count} of {total_questions} questions. {correct_count} correct. {'Good work on the problems you solved correctly!' if correct_count > 0 else 'Keep practicing to improve.'}"
+            }
         
         return assessment
     except HTTPException:
