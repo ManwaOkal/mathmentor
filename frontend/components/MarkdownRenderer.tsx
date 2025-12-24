@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
@@ -8,92 +8,220 @@ import 'katex/dist/katex.min.css'
 
 interface MarkdownRendererProps {
   content: string
+  className?: string
 }
 
-export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
-  return (
-    <div className="prose prose-sm max-w-none dark:prose-invert">
-      <ReactMarkdown
-        remarkPlugins={[remarkMath]}
-        rehypePlugins={[rehypeKatex]}
-        components={{
-          code({ node, inline, className, children, ...props }: any) {
-            const match = /language-(\w+)/.exec(className || '')
-            return !inline && match ? (
-              <pre className="bg-slate-50 rounded-lg p-4 overflow-x-auto my-4 border border-slate-200">
-                <code className={className} {...props}>
-                  {children}
-                </code>
-              </pre>
-            ) : (
-              <code className="bg-slate-100 px-1.5 py-0.5 rounded text-sm font-mono text-slate-800" {...props}>
-                {children}
-              </code>
-            )
-          },
-          p({ children, ...props }: any) {
-            return (
-              <p className="mb-4 last:mb-0 leading-relaxed" {...props}>
-                {children}
-              </p>
-            )
-          },
-          h1({ children }: any) {
-            return <h1 className="text-2xl font-bold mb-4 mt-6 first:mt-0">{children}</h1>
-          },
-          h2({ children }: any) {
-            return <h2 className="text-xl font-semibold mb-3 mt-5 first:mt-0">{children}</h2>
-          },
-          h3({ children }: any) {
-            return <h3 className="text-lg font-semibold mb-2 mt-4 first:mt-0">{children}</h3>
-          },
-          ul({ children }: any) {
-            return <ul className="list-disc list-outside mb-4 ml-5 space-y-2">{children}</ul>
-          },
-          ol({ children }: any) {
-            return <ol className="list-decimal list-outside mb-4 ml-5 space-y-2">{children}</ol>
-          },
-          li({ children }: any) {
-            return <li className="leading-relaxed">{children}</li>
-          },
-          a({ children, href }: any) {
-            return (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-700 underline"
-              >
-                {children}
-              </a>
-            )
-          },
-          blockquote({ children }: any) {
-            return (
-              <blockquote className="border-l-4 border-slate-300 pl-4 italic my-4 text-slate-600">
-                {children}
-              </blockquote>
-            )
-          },
-          span({ className, children, ...props }: any) {
-            if (className?.includes('katex')) {
-              const isDisplay = className.includes('katex-display')
+/**
+ * Enhanced LaTeX preprocessor with better pattern matching
+ */
+function preprocessLatex(content: string): string {
+  if (!content.trim()) return content
+  
+  // Track replacements to avoid circular processing
+  const replacements: Array<{ pattern: RegExp, replacement: string | ((match: string, ...args: any[]) => string) }> = [
+    // Protect already wrapped math expressions first
+    { pattern: /\$\$[\s\S]*?\$\$/g, replacement: (match) => `__BLOCK_MATH__${btoa(match)}__END__` },
+    { pattern: /\$[^$\n]+\$/g, replacement: (match) => `__INLINE_MATH__${btoa(match)}__END__` },
+    
+    // Protect code blocks
+    { pattern: /```[\s\S]*?```/g, replacement: (match) => `__CODE_BLOCK__${btoa(match)}__END__` },
+    { pattern: /`[^`]+`/g, replacement: (match) => `__INLINE_CODE__${btoa(match)}__END__` },
+    
+    // Matrix sizes (m×n, n×p, etc.) - handle Unicode × symbol
+    { pattern: /\b([a-zA-Z])\s*×\s*([a-zA-Z])\b/g, replacement: '$$1 \\times $2$' },
+    { pattern: /\b(\d+)\s*×\s*(\d+)\b/g, replacement: '$$1 \\times $2$' },
+    
+    // Handle \times without delimiters (from backend) - wrap in $ delimiters
+    { pattern: /(?<!\$)(\d+)\\times(\d+)(?!\$)/g, replacement: '$$1\\times$2$' },
+    { pattern: /(?<!\$)([A-Za-z])\\times([A-Za-z])(?!\$)/g, replacement: '$$1\\times$2$' },
+    { pattern: /(?<!\$)(\d+)\\times([A-Za-z])(?!\$)/g, replacement: '$$1\\times$2$' },
+    { pattern: /(?<!\$)([A-Za-z])\\times(\d+)(?!\$)/g, replacement: '$$1\\times$2$' },
+    // More general pattern for \times in context
+    { pattern: /(?<!\$)([^\s$]+)\\times([^\s$]+)(?=\s|$|\.|,|;|:|\))(?!\$)/g, replacement: '$$1\\times$2$' },
+    
+    // Matrix declarations like "A = [1 2; 3 4]"
+    { pattern: /([A-Z])\s*=\s*\[([^\]]+)\]/g, replacement: '$$1 = \\begin{bmatrix} $2 \\end{bmatrix}$' },
+    
+    // Matrix element notation like a_{ij}, c_{11}
+    { pattern: /\b([a-z])_\{(\d+)(\d+)\}\b/g, replacement: '$$1_{$2$3}$' },
+    
+    // Summation notation
+    { pattern: /c_\{ij\}=\s*∑_\{k=1\}^n\s*a_\{ik\}⋅b_\{kj\}/g, replacement: '$$c_{ij} = \sum_{k=1}^{n} a_{ik} \cdot b_{kj}$$' },
+    
+    // Multiplication expressions like AB, BA
+    { pattern: /\b([A-Z])([A-Z])\b/g, replacement: (match, a, b) => {
+      // Only replace if likely to be matrix multiplication (two consecutive capital letters)
+      return a === a.toUpperCase() && b === b.toUpperCase() ? `$${a}${b}$` : match
+    }},
+    
+    // Single capital letters that are likely matrices
+    { pattern: /\b(Matrix|matrix|Let|Given|Consider|For)\s+([A-Z])\b/g, replacement: '$1 $${2}$' },
+  ]
+
+  let processed = content
+  
+  // Apply all replacements
+  replacements.forEach(({ pattern, replacement }) => {
+    processed = processed.replace(pattern, replacement as any)
+  })
+  
+  // Restore protected content
+  processed = processed.replace(/__BLOCK_MATH__([A-Za-z0-9+/=]+)__END__/g, (_, encoded) => {
+    try {
+      return atob(encoded)
+    } catch {
+      return `$$${encoded}$$`
+    }
+  })
+  
+  processed = processed.replace(/__INLINE_MATH__([A-Za-z0-9+/=]+)__END__/g, (_, encoded) => {
+    try {
+      return atob(encoded)
+    } catch {
+      return `$${encoded}$`
+    }
+  })
+  
+  processed = processed.replace(/__CODE_BLOCK__([A-Za-z0-9+/=]+)__END__/g, (_, encoded) => {
+    try {
+      return atob(encoded)
+    } catch {
+      return `\`\`\`\n${encoded}\n\`\`\``
+    }
+  })
+  
+  processed = processed.replace(/__INLINE_CODE__([A-Za-z0-9+/=]+)__END__/g, (_, encoded) => {
+    try {
+      return atob(encoded)
+    } catch {
+      return `\`${encoded}\``
+    }
+  })
+  
+  return processed
+}
+
+/**
+ * Clean content by fixing common LaTeX issues
+ */
+function cleanContent(content: string): string {
+  return content
+    // Fix broken matrix representations
+    .replace(/\$1\$\s*([^$]+)\s*\$1\$/g, '$$\\begin{bmatrix} $1 \\end{bmatrix}$$')
+    // Fix missing LaTeX commands
+    .replace(/\\begin\{bmatrix\}([^}]+)\\\\([^}]+)\\end\{bmatrix\}/g, '\\begin{bmatrix} $1 \\\\ $2 \\end{bmatrix}')
+    // Normalize multiplication dots
+    .replace(/⋅/g, '\\cdot')
+    .replace(/×/g, '\\times')
+    // Fix summation notation
+    .replace(/∑_\{([^}]+)\}\^\{([^}]+)\}/g, '\\sum_{$1}^{$2}')
+}
+
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
+  ({ content, className = '' }) => {
+    const processedContent = useMemo(() => {
+      const cleaned = cleanContent(content)
+      return preprocessLatex(cleaned)
+    }, [content])
+    
+    return (
+      <div className={`prose prose-sm max-w-none dark:prose-invert ${className}`}>
+        <style dangerouslySetInnerHTML={{ __html: `
+          .prose {
+            color: inherit;
+          }
+          .prose code:not(pre code) {
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 0.2em 0.4em;
+            border-radius: 0.25rem;
+            font-size: 0.875em;
+          }
+          .dark .prose code:not(pre code) {
+            background-color: rgba(255, 255, 255, 0.1);
+          }
+          .prose pre {
+            background-color: #1a202c;
+            color: #e2e8f0;
+            overflow-x: auto;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+          }
+        ` }} />
+        
+        <ReactMarkdown
+          remarkPlugins={[remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+          components={{
+            code({ node, inline, className, children, ...props }: any) {
+              const match = /language-(\w+)/.exec(className || '')
+              const language = match ? match[1] : ''
+              
+              if (inline) {
+                return (
+                  <code 
+                    className={`font-mono text-sm ${className || ''}`}
+                    style={{ 
+                      backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                      padding: '0.2em 0.4em',
+                      borderRadius: '0.25rem'
+                    }}
+                    {...props}
+                  >
+                    {children}
+                  </code>
+                )
+              }
+              
               return (
-                <span 
-                  className={`${className} ${isDisplay ? 'block my-4' : 'inline-block mx-1 my-2'}`}
-                  style={{ display: isDisplay ? 'block' : 'inline-block' }}
-                  {...props}
-                >
+                <div className="relative my-4">
+                  {language && (
+                    <div className="absolute top-0 right-0 px-2 py-1 text-xs bg-gray-700 text-gray-200 rounded-bl rounded-tr">
+                      {language}
+                    </div>
+                  )}
+                  <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
+                    <code className={`${className} block`} {...props}>
+                    {children}
+                  </code>
+                </pre>
+                </div>
+              )
+            },
+            // Add custom styling for tables
+            table({ children }: any) {
+              return (
+                <div className="overflow-x-auto my-4">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    {children}
+                  </table>
+                </div>
+              )
+            },
+            th({ children }: any) {
+              return (
+                <th className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                   {children}
-                </span>
+                </th>
+              )
+            },
+            td({ children }: any) {
+              return (
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                  {children}
+                </td>
               )
             }
-            return <span {...props}>{children}</span>
-          },
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
-  )
-}
+          }}
+        >
+          {processedContent}
+        </ReactMarkdown>
+      </div>
+    )
+  },
+  (prevProps, nextProps) => prevProps.content === nextProps.content
+)
+
+MarkdownRenderer.displayName = 'MarkdownRenderer'
+
+export default MarkdownRenderer
