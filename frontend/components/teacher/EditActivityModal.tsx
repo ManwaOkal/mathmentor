@@ -61,7 +61,7 @@ export default function EditActivityModal({
         activity_type: string
         difficulty: string
         settings: Record<string, any>
-        description?: string | null
+        description?: string
       } = {
         title: title.trim(),
         activity_type: activity.activity_type || 'interactive', // Required by API
@@ -75,9 +75,8 @@ export default function EditActivityModal({
       // Only include description if it's not empty
       if (description.trim()) {
         updatePayload.description = description.trim()
-      } else {
-        updatePayload.description = null
       }
+      // If description is empty, don't include it (undefined is fine)
 
       console.log('Updating activity with payload:', updatePayload)
       
