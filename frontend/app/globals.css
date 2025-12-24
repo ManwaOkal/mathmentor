@@ -27,15 +27,46 @@ body {
 /* LaTeX/Math rendering styles */
 .katex {
   font-size: 1.1em;
+  line-height: 1.5;
 }
 
+/* Display math (block formulas) - ensure they're on their own lines */
 .katex-display {
-  margin: 1em 0;
+  display: block;
+  margin: 1.5em 0;
+  text-align: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Inline math - add spacing to prevent cluttering with text */
+.katex:not(.katex-display) {
+  display: inline-block;
+  margin: 0 0.2em;
+  vertical-align: baseline;
+}
+
+/* Ensure paragraphs with math have proper spacing */
+.prose p:has(.katex) {
+  margin-top: 1em;
+  margin-bottom: 1em;
+  line-height: 1.8;
+}
+
+/* Prevent math formulas from breaking awkwardly */
+.katex-display .katex {
+  white-space: nowrap;
 }
 
 /* Ensure proper contrast for math in different contexts */
 .katex .mathnormal {
   color: inherit;
+}
+
+/* Better spacing for math in lists */
+.prose li:has(.katex) {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
 }
 
 /* Scrollbar styling */

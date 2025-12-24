@@ -640,8 +640,8 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
                             <span className="text-xs font-semibold text-slate-600 tracking-wide">MathMentor</span>
                           </div>
                         )}
-                        <div className="bg-white rounded-2xl rounded-tl-sm px-4 sm:px-5 py-3 sm:py-3.5 shadow-md border border-slate-100">
-                          <div className="prose prose-sm max-w-none prose-headings:mt-0 prose-headings:mb-2 prose-headings:text-slate-900 prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-0 prose-p:leading-relaxed prose-p:text-slate-700 prose-p:text-[15px] sm:prose-p:text-base prose-ul:my-2 prose-li:my-1 prose-li:text-slate-700 prose-li:leading-relaxed prose-strong:text-slate-900 prose-strong:font-semibold prose-code:text-slate-900 prose-code:bg-blue-50 prose-code:px-2 prose-code:py-1 prose-code:rounded-md prose-code:text-sm prose-code:font-mono prose-code:border prose-code:border-blue-100 prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:rounded-lg">
+                        <div className="bg-white rounded-2xl rounded-tl-sm px-4 sm:px-5 py-4 sm:py-5 shadow-md border border-slate-100">
+                          <div className="prose prose-sm max-w-none prose-headings:mt-0 prose-headings:mb-3 prose-headings:text-slate-900 prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-2 prose-p:leading-relaxed prose-p:text-slate-700 prose-p:text-[15px] sm:prose-p:text-base prose-ul:my-3 prose-li:my-1.5 prose-li:text-slate-700 prose-li:leading-relaxed prose-strong:text-slate-900 prose-strong:font-semibold prose-code:text-slate-900 prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:rounded-lg prose-pre:my-3">
                             <MarkdownRenderer content={message.content} />
                           </div>
                         </div>
