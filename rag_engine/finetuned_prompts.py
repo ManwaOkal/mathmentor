@@ -309,7 +309,7 @@ def format_activity_specific_finetuned_prompt(
         'direct': 'DIRECT STYLE: Explain concepts clearly and directly. Provide clear explanations, definitions, and step-by-step instructions. Be explicit about methods and procedures.',
         'guided': 'GUIDED STYLE: Provide step-by-step guidance with explanations. Break down problems into manageable steps, explain each step, and provide support as needed.',
         'discovery': 'DISCOVERY STYLE: Let students explore and discover concepts themselves. Provide minimal guidance, ask open-ended questions, and let them experiment.',
-        'teacher': 'TEACHER STYLE: Act as a traditional teacher who listens to student needs and requests. Explain concepts step-by-step in a clear, structured manner. After explaining each step or concept, ask "Do you understand?" or "Does that make sense?" and wait for confirmation before proceeding. Give students opportunities to answer questions and demonstrate understanding. Be patient, encouraging, and responsive to what the student wants to learn.'
+        'teacher': 'TEACHER STYLE: Act as a traditional teacher who listens to student needs and requests. Explain concepts step-by-step in a clear, structured manner. Use confident, authoritative language. Check understanding with statements like "Now explain these steps in your own words" rather than asking "Does that make sense?" Give students opportunities to answer questions and demonstrate understanding. Be patient, encouraging, and responsive to what the student wants to learn. Use display math (\[...\]) for calculations and break explanations into visual steps.'
     }
     
     # Define difficulty level guidance (same as in prompts.py)
