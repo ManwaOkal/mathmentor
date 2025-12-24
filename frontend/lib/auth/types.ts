@@ -65,6 +65,7 @@ export interface LearningActivity {
   estimated_time_minutes?: number;
   learning_objectives?: string[];
   settings?: Record<string, any>;
+  metadata?: Record<string, any>;
   created_at: string;
   updated_at: string;
 }
