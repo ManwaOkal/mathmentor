@@ -56,7 +56,13 @@ export default function EditActivityModal({
 
       // Merge existing settings with teaching style
       const existingSettings = activity.settings || {}
-      const updatePayload = {
+      const updatePayload: {
+        title: string
+        activity_type: string
+        difficulty: string
+        settings: Record<string, any>
+        description?: string | null
+      } = {
         title: title.trim(),
         activity_type: activity.activity_type || 'interactive', // Required by API
         difficulty: difficulty,
