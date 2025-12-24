@@ -320,7 +320,7 @@ export default function StudentActivity({ activityId, onActivityCompleted }: Stu
   }, [activity, messages, completed, sessionToken, getConversationHistory])
 
   const generateWelcomeMessage = () => {
-    return `Hi! My name is MathMentor, your AI math tutor. I've been programmed by your teacher to teach you using their specific methods and instructions. Your teacher has planned this lesson to help you master mathematical concepts through conversation. I'm here to help you succeed!`
+    return `Hi! My name is MathMentor, your math tutor. I'm here to help you master mathematical concepts through conversation. Let's begin!`
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

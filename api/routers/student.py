@@ -1258,6 +1258,20 @@ async def get_activity_introduction(
         metadata = activity.get('metadata', {})
         settings = activity.get('settings', {})
         
+        # Handle JSON string settings if needed
+        if isinstance(settings, str):
+            try:
+                import json
+                settings = json.loads(settings)
+            except:
+                settings = {}
+        if isinstance(metadata, str):
+            try:
+                import json
+                metadata = json.loads(metadata)
+            except:
+                metadata = {}
+        
         # Get activity details from various possible locations
         topic = settings.get('topic') or metadata.get('topic') or activity.get('title', 'this topic')
         
@@ -1307,8 +1321,36 @@ async def get_activity_introduction(
         if not student_first_name or student_first_name == '':
             student_first_name = 'Student'
         
-        # Format introduction as enthusiastic single paragraph
-        introduction = f"Hi {student_first_name}! I'm MathMentor, your AI math tutor. I've been programmed by your teacher to teach you using their specific methods and instructions. Your teacher has planned {activity_title} to help you practice {learning_objective_summary}. Take your time, try things out, and don't worry about getting everything right the first time - this activity is here to help you learn! When you're ready, let's begin!"
+        # Get teaching style from settings or metadata (check nested structures too)
+        teaching_style = None
+        if isinstance(settings, dict):
+            teaching_style = settings.get('teaching_style')
+        if not teaching_style and isinstance(metadata, dict):
+            teaching_style = metadata.get('teaching_style')
+        # Also check if settings itself is a dict with nested structure
+        if not teaching_style and isinstance(settings, dict):
+            # Check for nested structures
+            if 'topic' in settings and isinstance(settings.get('topic'), dict):
+                teaching_style = settings.get('topic', {}).get('teaching_style')
+        
+        # Default to guided if not found
+        if not teaching_style:
+            teaching_style = 'guided'
+        
+        # Define brief teaching style explanations for the introduction
+        teaching_style_explanations = {
+            'socratic': 'I\'ll guide you by asking questions to help you discover the answers yourself, rather than giving you direct solutions.',
+            'direct': 'I\'ll explain concepts clearly and directly, providing step-by-step instructions and clear explanations.',
+            'guided': 'I\'ll work through problems with you step-by-step, providing guidance and support as you learn.',
+            'discovery': 'I\'ll encourage you to explore and discover concepts yourself, with minimal guidance to help you think independently.',
+            'teacher': 'I\'ll teach you step-by-step in a clear, structured way, checking your understanding as we go and adapting to what you need.'
+        }
+        
+        # Get the teaching style explanation
+        teaching_explanation = teaching_style_explanations.get(teaching_style.lower() if isinstance(teaching_style, str) else 'guided', teaching_style_explanations['guided'])
+        
+        # Format introduction without teaching style explanation - make activity title stand out
+        introduction = f"Hi {student_first_name}! I'm MathMentor, your math tutor. Today we'll be working on **{activity_title}**. This will help you practice {learning_objective_summary}. Take your time, try things out, and don't worry about getting everything right the first time - this activity is here to help you learn! When you're ready, let's begin!"
         
         return {"introduction": introduction}
     except HTTPException:

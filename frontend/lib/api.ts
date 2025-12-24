@@ -876,7 +876,7 @@ class ApiClient {
     return Array.isArray(result) ? result : []
   }
 
-  async getStudentActivities(classroomId?: string, status?: string, sessionToken?: string): Promise<any> {
+  async getStudentActivities(classroomId?: string, status?: string, sessionToken?: string, sync?: boolean): Promise<any> {
     const token = sessionToken || await this.getAuthToken()
     if (!token) {
       throw new Error('No authentication token available. Please log in again.')
@@ -885,6 +885,7 @@ class ApiClient {
     const params = new URLSearchParams()
     if (classroomId) params.append('classroom_id', classroomId)
     if (status) params.append('status', status)
+    if (sync !== undefined) params.append('sync', sync.toString())
     const query = params.toString()
     const url = `${this.baseUrl}/api/student/activities${query ? `?${query}` : ''}`
     
