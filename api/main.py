@@ -402,6 +402,12 @@ class UpdateMasteryRequest(BaseModel):
     mastery_score: float
 
 
+class NewsletterSubscribeRequest(BaseModel):
+    email: str
+    name: Optional[str] = None
+    source: Optional[str] = "landing_page"
+
+
 @app.post("/api/generate-test")
 async def generate_test(
     request: TestRequest,
@@ -451,6 +457,81 @@ async def update_mastery(
             raise HTTPException(status_code=500, detail="Failed to update mastery")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/newsletter/subscribe")
+async def subscribe_newsletter(request: NewsletterSubscribeRequest):
+    """
+    Subscribe an email to the newsletter.
+    """
+    try:
+        from lib.supabase_client import get_supabase_client
+        supabase = get_supabase_client()
+        
+        # Backend email validation - more robust
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        
+        # Normalize email
+        email = request.email.strip().lower()
+        
+        # Validate email format
+        if not email:
+            raise HTTPException(status_code=400, detail="Email is required")
+        
+        if not re.match(email_pattern, email):
+            raise HTTPException(status_code=400, detail="Invalid email format")
+        
+        # Additional validation: check email length
+        if len(email) > 255:
+            raise HTTPException(status_code=400, detail="Email address is too long")
+        
+        # Check if email already exists
+        existing = supabase.table('newsletter_subscriptions').select('*').eq('email', email).execute()
+        
+        if existing.data:
+            subscription = existing.data[0]
+            # If unsubscribed, reactivate
+            if not subscription.get('is_active', True):
+                supabase.table('newsletter_subscriptions').update({
+                    'is_active': True,
+                    'unsubscribed_at': None,
+                    'name': request.name or subscription.get('name'),
+                    'source': request.source or subscription.get('source', 'landing_page')
+                }).eq('email', email).execute()
+                return {
+                    "success": True,
+                    "message": "Successfully resubscribed to newsletter",
+                    "resubscribed": True
+                }
+            else:
+                # Already subscribed
+                return {
+                    "success": True,
+                    "message": "Email is already subscribed",
+                    "already_subscribed": True
+                }
+        
+        # Insert new subscription
+        result = supabase.table('newsletter_subscriptions').insert({
+            'email': email,
+            'name': request.name.strip() if request.name else None,
+            'source': request.source or 'landing_page',
+            'is_active': True
+        }).execute()
+        
+        if result.data:
+            return {
+                "success": True,
+                "message": "Successfully subscribed to newsletter"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create subscription")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Subscription error: {str(e)}")
 
 
 if __name__ == "__main__":

@@ -1320,6 +1320,33 @@ class ApiClient {
 
     return response.json()
   }
+
+  // ============================================================================
+  // NEWSLETTER SUBSCRIPTION
+  // ============================================================================
+
+  async subscribeNewsletter(email: string, name?: string, source: string = 'landing_page'): Promise<{ success: boolean; message: string; resubscribed?: boolean; already_subscribed?: boolean }> {
+    // Newsletter subscription doesn't require authentication
+    const url = `${this.baseUrl}/api/newsletter/subscribe`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        name: name || undefined,
+        source
+      })
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }))
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
+  }
 }
 
 export const api = new ApiClient()
