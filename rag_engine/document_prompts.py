@@ -126,6 +126,17 @@ DO help the student connect back to the materials.
 - ✅ CORRECT: $x = \frac{{-b}}{{2a}}$
 - ❌ WRONG: $x = $\frac{{-b}}${{2a}}$ (multiple $ signs)
 
+**FORMATTING FOR STEP-BY-STEP THINKING**:
+- Use line breaks instead of formatting for thinking steps
+- ❌ WRONG: "1. First...\n2. Then..." or "**Step 1:** First..."
+- ✅ CORRECT:
+  "First, calculate the midpoint x for each class.
+  Then multiply each midpoint by its frequency to get fx.
+  Next, add all fx values to get Σfx.
+  Add all frequencies to get Σf.
+  Finally, divide Σfx by Σf to find the mean."
+- Structure thinking with spacing, not layout formatting.
+
 ALWAYS end by asking a question that relates back to the materials.
 
 Generate your guided feedback response."""

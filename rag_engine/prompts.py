@@ -357,7 +357,7 @@ def format_conversational_tutor_prompt(
         'direct': 'DIRECT STYLE: Explain concepts clearly and directly. Provide clear explanations, definitions, and step-by-step instructions. Be explicit about methods and procedures. Example: "Here\'s how we solve this: First... then... finally..."',
         'guided': 'GUIDED STYLE: Provide step-by-step guidance with explanations. Break down problems into manageable steps, explain each step, and provide support as needed. Balance between explaining and letting students work. Example: "Let\'s work through this together. First, we need to..."',
         'discovery': 'DISCOVERY STYLE: Let students explore and discover concepts themselves. Provide minimal guidance, ask open-ended questions, and let them experiment. Guide them when stuck but encourage independent thinking. Example: "Try working with this and see what patterns you notice..."',
-        'teacher': 'TEACHER STYLE: Act as a traditional teacher who listens to student needs and requests. Explain concepts step-by-step in a clear, structured manner. Use confident, authoritative language. Check understanding with statements like "Now explain these steps in your own words" rather than asking "Does that make sense?" Give students opportunities to answer questions and demonstrate understanding. Be patient, encouraging, and responsive to what the student wants to learn. Example: "Let me explain this step by step. First, [explanation with display math]. Now, [next step with display math]. Now explain these steps in your own words."'
+        'teacher': 'TEACHER STYLE: Act as a traditional teacher who listens to student needs and requests. When teaching a concept, FIRST provide a comprehensive, detailed explanation covering all key aspects of the concept. Explain what it is, how it works, why it matters, and provide clear examples. Use confident, authoritative language. After the detailed explanation, THEN ask for clarification (e.g., "Do you have any questions about this concept?" or "Is there anything you\'d like me to clarify?") OR ask if they\'re ready to try some practice questions (e.g., "Are you ready to try some questions on this?" or "Would you like to practice with some questions now?"). Be patient, encouraging, and responsive to what the student wants to learn. Example: "Let me explain [concept] in detail. [Comprehensive explanation with examples and display math]. Do you have any questions about this, or are you ready to try some practice questions?"'
     }
     
     # Define difficulty level guidance
@@ -408,6 +408,12 @@ Provide a comprehensive, structured lesson on this mathematical topic. Cover all
 - Follow the teacher's instructions above EXACTLY - this is what they want students to learn
 - Use {teaching_style} teaching style EXACTLY as specified above - this determines HOW you teach
 - Adjust to {difficulty} difficulty level EXACTLY as specified above - this determines complexity and depth
+
+**SPECIFIC INSTRUCTIONS FOR TEACHER STYLE**:
+- FIRST: Provide a comprehensive, detailed explanation of the concept covering what it is, how it works, why it matters, with clear examples
+- THEN: At the end of your explanation, ask for clarification OR ask if they're ready to try some questions
+- Example ending: "Do you have any questions about this concept, or are you ready to try some practice questions?"
+- Do NOT ask questions during the explanation - complete the full explanation first, then ask at the end
 
 **IMPORTANT - STUDENT RESPONSES**:
 - If a student says "okay", "ok", "yes", "sure", "alright" - these are just acknowledgments, NOT requests to move forward
@@ -832,6 +838,18 @@ D. **WRONG with NO WORK/SHOWS CONFUSION**:
 
 9. **Limit each paragraph to one idea.**
    - If a new concept is introduced, start a new paragraph.
+
+10. **Format step-by-step thinking with line breaks, not formatting.**
+   - Use simple line breaks to separate thinking steps, not numbered lists or formatted text.
+   - ❌ WRONG: "1. First, calculate...\n2. Then multiply...\n3. Next, add..."
+   - ❌ WRONG: "**Step 1:** First...\n**Step 2:** Then..."
+   - ✅ CORRECT:
+     "First, calculate the midpoint x for each class.
+     Then multiply each midpoint by its frequency to get fx.
+     Next, add all fx values to get Σfx.
+     Add all frequencies to get Σf.
+     Finally, divide Σfx by Σf to find the mean."
+   - Structure thinking with spacing, not layout formatting.
 
 **ONE-LINE RULE**: Never mix formulas and sentences. All calculations must appear on their own lines, separated from explanations by blank lines.
 
