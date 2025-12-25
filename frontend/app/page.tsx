@@ -8,7 +8,6 @@ import Navbar from '@/components/Navbar'
 import { 
   CheckCircle,
   ArrowRight,
-  BookOpen,
 } from 'lucide-react'
 import { useAuth } from '../lib/auth/useAuth'
 import { UserRole } from '../lib/auth/types'
@@ -320,7 +319,6 @@ function HomeContent() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-6">
             <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5" />
               <span className="text-lg font-semibold">MathMentor</span>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 text-sm text-[#a3a3a3]">

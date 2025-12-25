@@ -24,8 +24,12 @@ export default function Navbar({
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  // Check if we're on one of the pages that should have the special mobile layout
+  const isSpecialPage = pathname === '/' || pathname === '/about' || pathname === '/teachers' || pathname === '/students'
+  const shouldUseSpecialMobileLayout = isSpecialPage && !leftContent
+
   return (
-    <nav className={`sticky top-0 z-50 bg-white/90 backdrop-blur-2xl border-b border-slate-200/60 shadow-xl shadow-slate-900/10 overflow-hidden flex items-center ${className}`} style={{ height: compact ? '4rem' : '6rem' }}>
+    <nav className={`sticky top-0 z-50 bg-white/90 backdrop-blur-2xl border-b border-slate-200/60 shadow-xl shadow-slate-900/10 overflow-hidden flex flex-col ${className}`}>
       {/* Enhanced gradient overlays */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-50/40 to-transparent pointer-events-none"></div>
       <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-transparent pointer-events-none"></div>
@@ -33,7 +37,11 @@ export default function Navbar({
       {/* Animated shine effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shine pointer-events-none"></div>
       
-      <div className="relative flex items-center justify-between w-full h-full gap-2 sm:gap-4">
+      <div className={`relative flex items-center w-full gap-2 sm:gap-4 ${
+        shouldUseSpecialMobileLayout 
+          ? 'md:justify-between' 
+          : 'justify-between'
+      }`} style={{ height: compact ? '4rem' : '6rem' }}>
         {/* Left: Logo and Navigation Links */}
         <div className="flex items-center flex-shrink-0 min-w-0 pl-3 sm:pl-6 lg:pl-8">
           {leftContent ? (
@@ -96,32 +104,63 @@ export default function Navbar({
           )}
         </div>
         
-        {/* Center: Custom content */}
-        {centerContent && (
-          <div className="flex-1 flex items-center justify-center min-w-0 px-2">
-            {centerContent}
-          </div>
-        )}
-        
-        {/* Right: Hamburger (mobile) and Custom content */}
-        <div className="flex items-center justify-end flex-shrink-0 min-w-0 pr-3 sm:pr-6 lg:pr-8 gap-2 overflow-visible">
-          {!leftContent && (
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
+        {/* Center: Custom content OR Auth buttons (mobile only for special pages) */}
+        {shouldUseSpecialMobileLayout ? (
+          <>
+            {/* Center: Auth buttons on mobile */}
+            <div className="md:hidden flex-1 flex items-center justify-center min-w-0 px-2">
+              {rightContent}
+            </div>
+            {/* Right: Hamburger on mobile, Auth buttons on desktop */}
+            <div className="flex items-center justify-end flex-shrink-0 min-w-0 pr-3 sm:pr-6 lg:pr-8 gap-2 overflow-visible">
+              {!leftContent && (
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
+                  aria-label="Toggle menu"
+                >
+                  {mobileMenuOpen ? (
+                    <X className="w-6 h-6" />
+                  ) : (
+                    <Menu className="w-6 h-6" />
+                  )}
+                </button>
               )}
-            </button>
-          )}
-          <div className="overflow-visible">
-            {rightContent}
-          </div>
-        </div>
+              <div className="hidden md:block overflow-visible">
+                {rightContent}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Center: Custom content */}
+            {centerContent && (
+              <div className="flex-1 flex items-center justify-center min-w-0 px-2">
+                {centerContent}
+              </div>
+            )}
+            
+            {/* Right: Hamburger (mobile) and Custom content */}
+            <div className="flex items-center justify-end flex-shrink-0 min-w-0 pr-3 sm:pr-6 lg:pr-8 gap-2 overflow-visible">
+              {!leftContent && (
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="md:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
+                  aria-label="Toggle menu"
+                >
+                  {mobileMenuOpen ? (
+                    <X className="w-6 h-6" />
+                  ) : (
+                    <Menu className="w-6 h-6" />
+                  )}
+                </button>
+              )}
+              <div className="overflow-visible">
+                {rightContent}
+              </div>
+            </div>
+          </>
+        )}
       </div>
       
       {/* Mobile Menu */}
