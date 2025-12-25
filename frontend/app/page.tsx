@@ -315,17 +315,14 @@ function HomeContent() {
       </section>
 
       {/* Footer */}
-      <footer className="py-6 px-4 sm:px-6 lg:px-8 bg-[#1f1f1f] text-white border-t border-slate-800">
+      <footer className="py-8 px-4 sm:px-6 lg:px-8 bg-[#1f1f1f] text-white border-t border-slate-800">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-6">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold">MathMentor</span>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 text-sm text-[#a3a3a3]">
-              <a href="#contact" className="hover:text-white transition-colors">Contact</a>
-              <a href="/founder" className="hover:text-white transition-colors">About the Founder</a>
-              <span className="text-xs sm:text-sm">© {new Date().getFullYear()} MathMentor. All rights reserved.</span>
-            </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
+            <a href="mailto:careyokal@gmail.com" className="text-sm text-[#a3a3a3] hover:text-white transition-colors">Contact</a>
+            <span className="hidden sm:inline text-[#a3a3a3]">•</span>
+            <a href="/founder" className="text-sm text-[#a3a3a3] hover:text-white transition-colors">About the Founder</a>
+            <span className="hidden sm:inline text-[#a3a3a3]">•</span>
+            <span className="text-xs sm:text-sm text-[#a3a3a3]">© {new Date().getFullYear()} MathMentor. All rights reserved.</span>
           </div>
         </div>
       </footer>
