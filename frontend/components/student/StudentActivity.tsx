@@ -630,8 +630,8 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
                   
                   <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} ${showAvatar ? '' : isUser ? 'mr-12' : 'ml-12'} max-w-[95%] sm:max-w-[90%] md:max-w-[85%]`}>
                     {isUser ? (
-                      <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl rounded-tr-sm px-4 sm:px-5 py-3 sm:py-3.5 shadow-lg shadow-blue-500/20">
-                        <p className="text-[15px] sm:text-base leading-relaxed whitespace-pre-wrap font-normal">{message.content}</p>
+                      <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl rounded-tr-sm px-4 sm:px-5 py-3 sm:py-3.5 shadow-lg shadow-blue-500/20">
+                        <p className="text-[15px] sm:text-base leading-relaxed whitespace-pre-wrap font-normal text-white">{message.content}</p>
                       </div>
                     ) : (
                       <div className="w-full">
@@ -757,7 +757,7 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
               {assessmentFeedback && (
                 <div className="pt-4 border-t border-slate-200">
                   <h3 className="text-sm font-semibold text-slate-900 mb-3 tracking-wide">Feedback</h3>
-                  <div className="text-[15px] text-slate-700 leading-relaxed">
+                  <div className="prose prose-sm max-w-none prose-headings:mt-0 prose-headings:mb-3 prose-headings:text-slate-900 prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-2 prose-p:leading-relaxed prose-p:text-slate-700 prose-p:text-[15px] sm:prose-p:text-base prose-ul:my-3 prose-li:my-1.5 prose-li:text-slate-700 prose-li:leading-relaxed prose-strong:text-slate-900 prose-strong:font-semibold prose-code:text-slate-900 prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:rounded-lg prose-pre:my-3">
                     <MarkdownRenderer content={assessmentFeedback} />
                   </div>
                 </div>

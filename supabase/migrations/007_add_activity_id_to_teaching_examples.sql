@@ -12,3 +12,5 @@ CREATE INDEX IF NOT EXISTS idx_teaching_examples_activity_id ON teaching_example
 
 COMMENT ON COLUMN teaching_examples.activity_id IS 'Optional: Links teaching example to a specific activity. If NULL, example applies to all activities for the teacher.';
 
+
+

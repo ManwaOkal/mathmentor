@@ -9,9 +9,6 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'MathMentor - AI Math Tutor',
   description: 'RAG-powered AI math tutoring platform',
-  icons: {
-    icon: '/favicon.ico',
-  },
 }
 
 export default function RootLayout({

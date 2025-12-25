@@ -2,6 +2,8 @@
 
 import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import Image from 'next/image'
 import Auth from '@/components/Auth'
 import Navbar from '@/components/Navbar'
@@ -20,7 +22,10 @@ import {
   Lightbulb,
   Clock,
   Award,
-  TrendingUp
+  TrendingUp,
+  Eye,
+  Settings,
+  Home as HomeIcon,
 } from 'lucide-react'
 import { useAuth } from '../lib/auth/useAuth'
 import { UserRole } from '../lib/auth/types'
@@ -29,6 +34,7 @@ function HomeContent() {
   const { user, profile, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
 
   // If we just logged out, clear any session data
   useEffect(() => {
@@ -91,79 +97,110 @@ function HomeContent() {
 
   // Show landing page only for non-logged-in users
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#fafafa]">
       {/* Navigation Bar */}
       <Navbar
         leftContent={
-          user && profile ? (
-            <div className="hidden md:flex items-center gap-6">
-              {profile.role === UserRole.TEACHER && (
-                <button
-                  onClick={() => router.push('/teacher')}
-                  className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
-                >
-                  Teacher Portal
-                </button>
-              )}
-              {(profile.role === UserRole.STUDENT || profile.role === UserRole.ADMIN) && (
-                <button
-                  onClick={() => router.push('/student')}
-                  className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
-                >
-                  Student Portal
-                </button>
-              )}
-            </div>
-          ) : undefined
+          <div className="hidden md:flex items-center gap-6">
+            <Link
+              href="/"
+              className={`inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg transition-all duration-200 flex-shrink-0 group ${
+                pathname === '/'
+                  ? 'text-slate-900 bg-slate-100 font-semibold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <HomeIcon className="w-4 h-4 transition-transform group-hover:scale-110" />
+              <span className="text-sm font-medium hidden sm:inline">Home</span>
+            </Link>
+            <Link
+              href="/teachers"
+              className={`text-sm font-medium transition-colors px-3 py-1.5 rounded-lg ${
+                pathname === '/teachers'
+                  ? 'text-slate-900 bg-slate-100 font-semibold'
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              For Teachers
+            </Link>
+            <Link
+              href="/students"
+              className={`text-sm font-medium transition-colors px-3 py-1.5 rounded-lg ${
+                pathname === '/students'
+                  ? 'text-slate-900 bg-slate-100 font-semibold'
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              For Students
+            </Link>
+          </div>
         }
         rightContent={<Auth />}
       />
 
-      {/* Hero Section */}
-      <section className="relative pt-16 sm:pt-20 pb-20 sm:pb-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
+      {/* Hero Section - Editorial Style */}
+      <section className="relative pt-8 sm:pt-12 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 bg-[#fafafa] overflow-hidden">
+        {/* Subtle math-themed background elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 opacity-[0.03]">
+          <div className="absolute top-20 right-20 text-6xl font-light">∑</div>
+          <div className="absolute top-40 right-40 text-4xl font-light">∫</div>
+          <div className="absolute top-60 right-60 text-5xl font-light">√</div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center">
             {/* Left: Content */}
-            <div className="order-2 lg:order-1">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full text-xs font-medium text-slate-700 mb-4 sm:mb-6">
-                <Sparkles className="w-3 h-3" />
-                <span>AI-Powered Math Tutoring</span>
-              </div>
-              
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 mb-4 sm:mb-6 leading-tight">
-                Conversational AI Tutor for{' '}
-                <span className="text-slate-700">Math</span>
+            <div className="lg:pr-12">
+              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-[#1f1f1f] mb-8 leading-[1.05] tracking-[-0.02em]">
+                Train your own AI{' '}
+                <span className="text-[#525252]">teaching assistants</span>
               </h1>
               
-              <p className="text-base sm:text-lg md:text-xl text-slate-600 mb-6 sm:mb-8 leading-relaxed">
-                Rethinking how math is taught.
-              </p>
+              {/* Outcome-focused bullets - no boxes */}
+              <div className="space-y-4 mb-8">
+                <div className="flex items-start gap-4">
+                  <CheckCircle className="w-5 h-5 text-[#475569] flex-shrink-0 mt-0.5" />
+                  <p className="text-lg text-[#525252] leading-relaxed">Students get instant, personalized help when they need it</p>
+                </div>
+                <div className="flex items-start gap-4">
+                  <CheckCircle className="w-5 h-5 text-[#475569] flex-shrink-0 mt-0.5" />
+                  <p className="text-lg text-[#525252] leading-relaxed">Teachers customize AI to match their teaching style</p>
+                </div>
+                <div className="flex items-start gap-4">
+                  <CheckCircle className="w-5 h-5 text-[#475569] flex-shrink-0 mt-0.5" />
+                  <p className="text-lg text-[#525252] leading-relaxed">See student progress and learning gaps in real-time</p>
+                </div>
+              </div>
               
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => {
                     window.dispatchEvent(new CustomEvent('openAuth', { detail: { signup: true } }))
                   }}
-                  className="px-6 py-3 sm:py-3.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-medium shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-sm sm:text-base min-h-[44px]"
+                  className="px-8 py-4 bg-[#1f1f1f] text-white rounded-lg hover:bg-[#2d2d2d] transition-all font-semibold shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-base"
                 >
-                  Get Started Free
-                  <ArrowRight className="w-4 h-4" />
+                  Get Free Trial
+                  <ArrowRight className="w-5 h-5" />
                 </button>
                 <a
                   href="mailto:careyoka@gmail.com"
-                  className="px-6 py-3 sm:py-3.5 bg-white text-slate-900 border-2 border-slate-900 rounded-lg hover:bg-slate-50 transition-all font-medium text-center text-sm sm:text-base min-h-[44px] flex items-center justify-center"
+                  className="px-8 py-4 bg-transparent text-[#1f1f1f] hover:bg-[#f5f5f5] transition-all font-semibold text-center text-base flex items-center justify-center rounded-lg"
                 >
                   Contact Us
                 </a>
               </div>
             </div>
 
-            {/* Right: Chat Interface Image */}
-            <div className="relative order-1 lg:order-2 w-full flex items-center justify-center">
-              <div className="relative w-full max-w-2xl mx-auto rounded-2xl overflow-hidden shadow-2xl">
+            {/* Right: Chat Interface Image - Floating, less framed */}
+            <div className="relative w-full flex items-center justify-center lg:pl-12">
+              <div className="relative w-full max-w-2xl -mt-8">
+                {/* Softer laptop mockup */}
+                <div className="relative">
+                  <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1">
+                    <div className="bg-white rounded-lg overflow-hidden">
                 <Image
-                  src="/student_chat_interface.png"
-                  alt="AI Tutor Chat Interface - Faster Learning, 24/7 Available, 100% Personalized, Infinite Patience, Always ready to help"
+                        src="/student_ai_chat_interface.png"
+                        alt="AI Tutor Chat Interface"
                   width={800}
                   height={1000}
                   className="w-full h-auto"
@@ -172,150 +209,33 @@ function HomeContent() {
                 />
               </div>
             </div>
+                  <div className="relative h-3 bg-gray-800 rounded-b-xl shadow-lg">
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
           </div>
         </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 mb-2 sm:mb-3 px-4">
-              Powerful AI Tools to Supercharge Learning
-            </h2>
-            <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto px-4">
-              Everything you need to create engaging, personalized math learning experiences
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
-            {/* Feature 1 */}
-            <div className="p-5 sm:p-6 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
               </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Conversational Learning</h3>
-              <p className="text-sm sm:text-base text-slate-600">
-                Engage in natural dialogue with an AI tutor that adapts to your pace and learning style
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="p-5 sm:p-6 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                <Target className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Fine-Tuned Teaching</h3>
-              <p className="text-sm sm:text-base text-slate-600">
-                Teachers can customize AI behavior to match their teaching style and assessment criteria
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="p-5 sm:p-6 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Instant Feedback</h3>
-              <p className="text-sm sm:text-base text-slate-600">
-                Get immediate, detailed feedback on your work without waiting days for grades
-              </p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="p-5 sm:p-6 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">Progress Analytics</h3>
-              <p className="text-sm sm:text-base text-slate-600">
-                Track student progress and identify learning gaps with detailed analytics
-              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section id="how-it-works" className="py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
+      {/* Partners Section - Always Visible */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-[#f5f5f5]">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 mb-2 sm:mb-3 px-4">
-              How It Works
-            </h2>
-            <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto px-4">
-              Simple, intuitive workflow for both teachers and students
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-            {/* Step 1 */}
-            <div className="text-center px-4">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-900 text-white rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold mx-auto mb-4 sm:mb-6">
-                1
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2 sm:mb-3">Create or Join</h3>
-              <p className="text-sm sm:text-base text-slate-600">
-                Teachers create classrooms and activities. Students join using a simple code.
-              </p>
-            </div>
-
-            {/* Step 2 */}
-            <div className="text-center px-4">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-900 text-white rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold mx-auto mb-4 sm:mb-6">
-                2
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2 sm:mb-3">Start Learning</h3>
-              <p className="text-sm sm:text-base text-slate-600">
-                Students engage in conversational learning with AI that adapts to their needs.
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="text-center px-4">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-900 text-white rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold mx-auto mb-4 sm:mb-6">
-                3
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2 sm:mb-3">Track Progress</h3>
-              <p className="text-sm sm:text-base text-slate-600">
-                Monitor understanding, get insights, and improve teaching strategies.
-              </p>
-            </div>
-          </div>
-
-          <div className="text-center">
-            <a
-              href="/how-it-works"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-medium text-sm sm:text-base min-h-[44px]"
-            >
-              Learn More
-              <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Partners Section */}
-      <section className="py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-3 sm:mb-4 px-4">
+          <div className="text-center mb-10 sm:mb-12">
+            <h2 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] mb-4">
               Trusted by Schools Across Kenya
             </h2>
-            <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto px-4">
+            <p className="text-lg text-[#737373] max-w-2xl mx-auto">
               Join these schools already using MathMentor to transform their math education
             </p>
           </div>
           
-          {/* Marquee Container */}
-          <div className="relative overflow-hidden py-4">
-            {/* Gradient overlays for fade effect */}
-            <div className="absolute left-0 top-0 bottom-0 w-20 sm:w-32 bg-gradient-to-r from-slate-50 to-transparent z-10 pointer-events-none"></div>
-            <div className="absolute right-0 top-0 bottom-0 w-20 sm:w-32 bg-gradient-to-l from-slate-50 to-transparent z-10 pointer-events-none"></div>
+          <div className="relative overflow-hidden py-6">
+            <div className="absolute left-0 top-0 bottom-0 w-20 sm:w-32 bg-gradient-to-r from-[#f5f5f5] to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute right-0 top-0 bottom-0 w-20 sm:w-32 bg-gradient-to-l from-[#f5f5f5] to-transparent z-10 pointer-events-none"></div>
             
-            {/* Marquee Track */}
             <div className="flex animate-marquee" style={{ width: 'fit-content' }}>
-              {/* Logo items array */}
               {[
                 { src: '/logos/chavakali.jpeg', alt: 'Chavakali High School' },
                 { src: '/logos/chuluni.jpeg', alt: 'Chuluni' },
@@ -330,20 +250,19 @@ function HomeContent() {
               ].map((logo, idx) => (
                 <div
                   key={`logo-${idx}`}
-                  className="flex items-center justify-center w-32 sm:w-40 h-20 sm:h-24 bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-slate-200 hover:shadow-md transition-shadow mx-4 sm:mx-6 flex-shrink-0"
+                  className="flex items-center justify-center w-28 sm:w-32 h-16 sm:h-20 mx-6 sm:mx-8 flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity"
                 >
                   <Image
                     src={logo.src}
                     alt={logo.alt}
                     width={120}
                     height={80}
-                    className="max-w-full max-h-full object-contain"
+                    className="max-w-full max-h-full object-contain grayscale"
                     unoptimized
                   />
                 </div>
               ))}
               
-              {/* Duplicate set for seamless loop */}
               {[
                 { src: '/logos/chavakali.jpeg', alt: 'Chavakali High School' },
                 { src: '/logos/chuluni.jpeg', alt: 'Chuluni' },
@@ -358,14 +277,14 @@ function HomeContent() {
               ].map((logo, idx) => (
                 <div
                   key={`logo-duplicate-${idx}`}
-                  className="flex items-center justify-center w-32 sm:w-40 h-20 sm:h-24 bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-slate-200 hover:shadow-md transition-shadow mx-4 sm:mx-6 flex-shrink-0"
+                  className="flex items-center justify-center w-28 sm:w-32 h-16 sm:h-20 mx-6 sm:mx-8 flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity"
                 >
                   <Image
                     src={logo.src}
                     alt={logo.alt}
                     width={120}
                     height={80}
-                    className="max-w-full max-h-full object-contain"
+                    className="max-w-full max-h-full object-contain grayscale"
                     unoptimized
                   />
                 </div>
@@ -375,57 +294,29 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 px-4">
-            Ready to Transform Math Education?
-          </h2>
-          <p className="text-base sm:text-lg md:text-xl text-slate-300 mb-4 sm:mb-6 px-4">
-            Join teachers and students who are already experiencing the future of personalized learning.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
-            <button
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent('openAuth', { detail: { signup: true } }))
-              }}
-              className="px-6 sm:px-8 py-3 sm:py-4 bg-white text-slate-900 rounded-lg hover:bg-slate-100 transition-all font-medium shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-sm sm:text-base min-h-[44px]"
-            >
-              Get Started Free
-              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-            <a
-              href="mailto:careyoka@gmail.com"
-              className="px-6 sm:px-8 py-3 sm:py-4 bg-transparent text-white border-2 border-white rounded-lg hover:bg-white/10 transition-all font-medium text-center text-sm sm:text-base min-h-[44px] flex items-center justify-center"
-            >
-              Contact Us
-            </a>
-          </div>
-        </div>
-      </section>
 
-      {/* Contact Section */}
-      <section id="contact" className="py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 bg-white">
+      {/* Contact Section - Always Visible */}
+      <section id="contact" className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-[#f5f5f5] border-t border-[#e5e5e5]">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-6 sm:mb-8">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 mb-2 sm:mb-3 px-4">
+          <div className="text-center mb-10 sm:mb-12">
+            <h2 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] mb-4 leading-tight tracking-tight">
               Get in Touch
             </h2>
-            <p className="text-base sm:text-lg md:text-xl text-slate-600 px-4">
+            <p className="text-xl text-[#737373] leading-relaxed">
               Have questions? We'd love to hear from you.
             </p>
           </div>
           
-          <div className="bg-slate-50 rounded-xl p-6 sm:p-8">
-            <p className="text-center text-sm sm:text-base text-slate-600 mb-3 sm:mb-4">
+          <div className="text-center space-y-4">
+            <p className="text-lg text-[#737373] leading-relaxed">
               For inquiries, support, or to schedule a demo, please reach out to us.
             </p>
-            <div className="text-center">
+            <div>
               <a 
                 href="mailto:careyoka@gmail.com"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-medium text-sm sm:text-base min-h-[44px]"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-[#1f1f1f] text-white rounded-lg hover:bg-[#2d2d2d] transition-all font-semibold text-base shadow-sm hover:shadow-md"
               >
-                <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
+                <MessageSquare className="w-5 h-5" />
                 Contact Support
               </a>
             </div>
@@ -433,36 +324,35 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
+      {/* Footer - Lighter */}
+      <footer className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-[#1f1f1f] text-white">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 mb-4 sm:mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-12 mb-12">
             <div>
-              <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
-                <span className="text-lg sm:text-xl font-semibold">MathMentor</span>
+              <div className="flex items-center gap-2 mb-4">
+                <BookOpen className="w-6 h-6" />
+                <span className="text-xl font-semibold">MathMentor</span>
               </div>
-              <p className="text-xs sm:text-sm text-slate-400">
+              <p className="text-sm text-[#a3a3a3] leading-relaxed">
                 AI-powered math tutoring platform for modern education.
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Product</h4>
-              <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-slate-400">
-                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="#benefits" className="hover:text-white transition-colors">Benefits</a></li>
-                <li><a href="/how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
+              <h4 className="font-semibold mb-4 text-[#e5e5e5]">Product</h4>
+              <ul className="space-y-3 text-sm text-[#a3a3a3]">
+                <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
+                <li><a href="/how-it-works" className="hover:text-white transition-colors">Learn More</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Company</h4>
-              <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-slate-400">
+              <h4 className="font-semibold mb-4 text-[#e5e5e5]">Company</h4>
+              <ul className="space-y-3 text-sm text-[#a3a3a3]">
                 <li><a href="#contact" className="hover:text-white transition-colors">Contact</a></li>
                 <li><a href="/about" className="hover:text-white transition-colors">About</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-slate-800 pt-6 sm:pt-8 text-center text-xs sm:text-sm text-slate-400">
+          <div className="pt-8 text-center text-sm text-[#a3a3a3]">
             <p>© 2024 MathMentor. All rights reserved.</p>
           </div>
         </div>
@@ -486,3 +376,5 @@ export default function Home() {
     </Suspense>
   )
 }
+
+
