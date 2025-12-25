@@ -267,7 +267,7 @@ function HomeContent() {
                   key={`logo-${idx}`}
                   className="group flex items-center justify-center mx-5 sm:mx-8 flex-shrink-0"
                 >
-                  <div className="relative bg-white rounded-xl p-5 sm:p-8 shadow-md hover:shadow-xl transition-all duration-300 border border-slate-200/50 hover:border-slate-300/70 hover:scale-105 w-44 sm:w-56 h-28 sm:h-36 flex items-center justify-center">
+                  <div className="relative bg-white rounded-xl p-6 sm:p-8 shadow-md hover:shadow-xl transition-all duration-300 border border-slate-200/50 hover:border-slate-300/70 hover:scale-105 w-56 sm:w-64 md:w-56 h-36 sm:h-40 md:h-36 flex items-center justify-center">
                     <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white to-slate-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   <Image
                     src={logo.src}
@@ -297,7 +297,7 @@ function HomeContent() {
                   key={`logo-duplicate-${idx}`}
                   className="group flex items-center justify-center mx-5 sm:mx-8 flex-shrink-0"
                 >
-                  <div className="relative bg-white rounded-xl p-5 sm:p-8 shadow-md hover:shadow-xl transition-all duration-300 border border-slate-200/50 hover:border-slate-300/70 hover:scale-105 w-44 sm:w-56 h-28 sm:h-36 flex items-center justify-center">
+                  <div className="relative bg-white rounded-xl p-6 sm:p-8 shadow-md hover:shadow-xl transition-all duration-300 border border-slate-200/50 hover:border-slate-300/70 hover:scale-105 w-56 sm:w-64 md:w-56 h-36 sm:h-40 md:h-36 flex items-center justify-center">
                     <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white to-slate-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   <Image
                     src={logo.src}
