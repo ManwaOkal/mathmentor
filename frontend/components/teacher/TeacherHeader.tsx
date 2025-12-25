@@ -37,6 +37,7 @@ export function TeacherHeader({ classroom, activeSection, onHomeClick }: Teacher
   return (
     <>
       <Navbar
+        compact={true}
         leftContent={
           <button
             onClick={handleHomeClick}

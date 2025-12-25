@@ -51,7 +51,9 @@ export default function Auth() {
   const [error, setError] = useState('')
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const [justLoggedIn, setJustLoggedIn] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -173,21 +175,37 @@ export default function Auth() {
     }
   }, [justLoggedIn, user, profile, loading, isOpen, router])
 
-  // Close dropdown when clicking outside
+  // Calculate dropdown position and close when clicking outside
   useEffect(() => {
     if (!user || !profile) return
     
+    const updatePosition = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect()
+        setDropdownPosition({
+          top: rect.bottom + 4,
+          right: window.innerWidth - rect.right
+        })
+      }
+    }
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
         setDropdownOpen(false)
       }
     }
 
     if (dropdownOpen) {
+      updatePosition()
+      window.addEventListener('resize', updatePosition)
+      window.addEventListener('scroll', updatePosition, true)
       document.addEventListener('mousedown', handleClickOutside)
     }
 
     return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [dropdownOpen, user, profile])
@@ -202,26 +220,37 @@ export default function Auth() {
 
   if (user && profile) {
     return (
-      <div className="relative" ref={dropdownRef}>
-        <button
-          onClick={() => setDropdownOpen(!dropdownOpen)}
-          className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors group opacity-90 hover:opacity-100"
-        >
-          {/* User info with integrated badge - reduced prominence */}
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-              <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" />
+      <>
+        <div className="relative inline-block">
+          <button
+            ref={buttonRef}
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors group opacity-90 hover:opacity-100"
+            style={{ minHeight: '2rem' }}
+          >
+            {/* User info with integrated badge - reduced prominence */}
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" />
+              </div>
+              <span className="hidden sm:inline text-sm font-medium text-slate-700 max-w-[100px] truncate leading-none">
+                {profile.name}
+              </span>
             </div>
-            <span className="hidden sm:inline text-sm font-medium text-slate-700 max-w-[100px] truncate">
-              {profile.name}
-            </span>
-          </div>
-          <ChevronDown className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 transition-transform flex-shrink-0 ${dropdownOpen ? 'rotate-180' : ''}`} />
-        </button>
+            <ChevronDown className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ${dropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
 
-        {/* Dropdown menu */}
-        {dropdownOpen && (
-          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
+        {/* Dropdown menu - rendered via portal */}
+        {dropdownOpen && typeof window !== 'undefined' && createPortal(
+          <div 
+            ref={dropdownRef}
+            className="fixed w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-[9999]"
+            style={{ 
+              top: `${dropdownPosition.top}px`,
+              right: `${dropdownPosition.right}px`
+            }}
+          >
             <div className="px-4 py-3 border-b border-slate-100 sm:hidden">
               <span className="text-sm font-medium text-slate-900">{profile.name}</span>
             </div>
@@ -233,9 +262,10 @@ export default function Auth() {
               <LogOut className="w-4 h-4" />
               <span>{logoutLoading ? 'Signing out...' : 'Sign out'}</span>
             </button>
-          </div>
+          </div>,
+          document.body
         )}
-      </div>
+      </>
     )
   }
 

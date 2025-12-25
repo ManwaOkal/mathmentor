@@ -331,6 +331,7 @@ function StudentPageContent() {
     <div className="min-h-screen bg-slate-50">
       {/* Navigation Bar - matching homepage style */}
       <Navbar
+        compact={true}
         leftContent={
           selectedClassroomId ? (
             <button
