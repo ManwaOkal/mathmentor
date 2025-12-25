@@ -25,7 +25,7 @@ export default function Navbar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // Check if we're on one of the pages that should have the special mobile layout
-  const isSpecialPage = pathname === '/' || pathname === '/about' || pathname === '/teachers' || pathname === '/students'
+  const isSpecialPage = pathname === '/' || pathname === '/about' || pathname === '/teachers' || pathname === '/students' || pathname === '/founder'
   const shouldUseSpecialMobileLayout = isSpecialPage && !leftContent
 
   return (
