@@ -242,7 +242,7 @@ function HomeContent() {
               Trusted by Schools Across Kenya
             </h2>
             <p className="text-lg text-[#737373] max-w-2xl mx-auto">
-              Join schools already using MathMentor to support their students
+              Join our growing list of partner high schools
             </p>
           </div>
           

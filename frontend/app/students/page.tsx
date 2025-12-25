@@ -62,37 +62,37 @@ export default function StudentsPage() {
         }}></div>
         
         {/* More Sticky Notes - Larger and More Prominent */}
-        <div className="absolute top-32 right-16 w-40 h-40 bg-yellow-100 rotate-6 shadow-2xl transform hover:rotate-3 transition-transform" style={{
+        <div className="hidden md:block absolute top-32 right-16 w-40 h-40 bg-yellow-100 rotate-6 shadow-2xl transform hover:rotate-3 transition-transform" style={{
           clipPath: 'polygon(0 0, 100% 0, 100% 85%, 95% 90%, 0 90%)',
           filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.2)) drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
         }}>
           <div className="p-4 text-sm font-semibold text-slate-800">x + y = z</div>
         </div>
-        <div className="absolute top-64 left-12 w-36 h-36 bg-blue-100 -rotate-6 shadow-2xl transform hover:-rotate-3 transition-transform" style={{
+        <div className="hidden md:block absolute top-64 left-12 w-36 h-36 bg-blue-100 -rotate-6 shadow-2xl transform hover:-rotate-3 transition-transform" style={{
           clipPath: 'polygon(0 0, 100% 0, 100% 85%, 95% 90%, 0 90%)',
           filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.2)) drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
         }}>
           <div className="p-3 text-xs font-semibold text-slate-800">∫ f(x)dx</div>
         </div>
-        <div className="absolute bottom-40 right-24 w-44 h-44 bg-pink-100 rotate-3 shadow-2xl transform hover:rotate-0 transition-transform" style={{
+        <div className="hidden md:block absolute bottom-40 right-24 w-44 h-44 bg-pink-100 rotate-3 shadow-2xl transform hover:rotate-0 transition-transform" style={{
           clipPath: 'polygon(0 0, 100% 0, 100% 85%, 95% 90%, 0 90%)',
           filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.2)) drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
         }}>
           <div className="p-4 text-sm font-semibold text-slate-800">a² + b² = c²</div>
         </div>
-        <div className="absolute bottom-64 left-20 w-36 h-36 bg-green-100 -rotate-12 shadow-2xl transform hover:-rotate-9 transition-transform" style={{
+        <div className="hidden md:block absolute bottom-64 left-20 w-36 h-36 bg-green-100 -rotate-12 shadow-2xl transform hover:-rotate-9 transition-transform" style={{
           clipPath: 'polygon(0 0, 100% 0, 100% 85%, 95% 90%, 0 90%)',
           filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.2)) drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
         }}>
           <div className="p-3 text-xs font-semibold text-slate-800">lim x→∞</div>
         </div>
-        <div className="absolute top-96 right-1/4 w-32 h-32 bg-orange-100 rotate-12 shadow-2xl transform hover:rotate-9 transition-transform" style={{
+        <div className="hidden md:block absolute top-96 right-1/4 w-32 h-32 bg-orange-100 rotate-12 shadow-2xl transform hover:rotate-9 transition-transform" style={{
           clipPath: 'polygon(0 0, 100% 0, 100% 85%, 95% 90%, 0 90%)',
           filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.2)) drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
         }}>
           <div className="p-3 text-xs font-semibold text-slate-800">f'(x)</div>
         </div>
-        <div className="absolute bottom-96 left-1/3 w-38 h-38 bg-purple-100 -rotate-9 shadow-2xl transform hover:-rotate-6 transition-transform" style={{
+        <div className="hidden md:block absolute bottom-96 left-1/3 w-38 h-38 bg-purple-100 -rotate-9 shadow-2xl transform hover:-rotate-6 transition-transform" style={{
           clipPath: 'polygon(0 0, 100% 0, 100% 85%, 95% 90%, 0 90%)',
           filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.2)) drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
         }}>
@@ -291,7 +291,7 @@ export default function StudentsPage() {
               }}>
                 <div className="p-3 text-xs font-semibold text-slate-800">Step 4</div>
               </div>
-              <div className="relative lg:order-1">
+              <div className="relative order-2 lg:order-1">
                 <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
                   filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
                 }}>
@@ -309,7 +309,7 @@ export default function StudentsPage() {
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
-              <div className="space-y-6 relative z-10 lg:order-2">
+              <div className="space-y-6 relative z-10 order-1 lg:order-2">
                 <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Start Learning</h3>
                 <p className="text-lg text-[#737373] leading-relaxed">
                   Engage in natural conversation with your AI tutor. Ask questions and get instant, personalized help.
