@@ -1,20 +1,31 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Auth from '@/components/Auth'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useRouter } from 'next/navigation'
 import { UserRole } from '@/lib/auth/types'
-import { Home } from 'lucide-react'
+import { BookOpen, ChevronUp } from 'lucide-react'
 
 export default function TeachersPage() {
   const { user, profile, loading } = useAuth()
   const router = useRouter()
-  const pathname = usePathname()
+  const [showScrollTop, setShowScrollTop] = useState(false)
+
+  // Handle scroll to top button visibility
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   // Redirect logged-in users to their respective portals
   useEffect(() => {
@@ -147,40 +158,7 @@ export default function TeachersPage() {
         }}></div>
       </div>
 
-      <Navbar
-        leftContent={
-          <div className="hidden md:flex items-center gap-6">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all duration-200 flex-shrink-0 group"
-            >
-              <Home className="w-4 h-4 transition-transform group-hover:scale-110" />
-              <span className="text-sm font-medium hidden sm:inline">Home</span>
-            </Link>
-            <Link
-              href="/teachers"
-              className={`text-sm font-medium transition-colors px-3 py-1.5 rounded-lg ${
-                pathname === '/teachers'
-                  ? 'text-slate-900 bg-slate-100 font-semibold'
-                  : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              For Teachers
-            </Link>
-            <Link
-              href="/students"
-              className={`text-sm font-medium transition-colors px-3 py-1.5 rounded-lg ${
-                pathname === '/students'
-                  ? 'text-slate-900 bg-slate-100 font-semibold'
-                  : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              For Students
-            </Link>
-          </div>
-        }
-        rightContent={<Auth />}
-      />
+      <Navbar rightContent={<Auth />} />
 
       {/* Hero Section */}
       <section className="relative pt-16 sm:pt-20 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8">
@@ -376,6 +354,34 @@ export default function TeachersPage() {
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="py-6 px-4 sm:px-6 lg:px-8 bg-[#1f1f1f] text-white border-t border-slate-800">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-6">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              <span className="text-lg font-semibold">MathMentor</span>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 text-sm text-[#a3a3a3]">
+              <a href="#contact" className="hover:text-white transition-colors">Contact</a>
+              <a href="/founder" className="hover:text-white transition-colors">About the Founder</a>
+              <span className="text-xs sm:text-sm">© {new Date().getFullYear()} MathMentor. All rights reserved.</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 z-50 bg-slate-900 text-white p-3 rounded-full shadow-lg hover:bg-slate-800 transition-all duration-300 hover:scale-110 flex items-center justify-center"
+          aria-label="Scroll to top"
+        >
+          <ChevronUp className="w-6 h-6" />
+        </button>
+      )}
     </div>
   )
 }
