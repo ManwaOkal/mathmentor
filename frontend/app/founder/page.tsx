@@ -103,7 +103,9 @@ export default function FounderPage() {
                   width={224}
                   height={224}
                   className="rounded-full object-cover w-full h-full shadow-2xl"
-                  unoptimized
+                  quality={90}
+                  priority
+                  sizes="(max-width: 640px) 192px, 224px"
                 />
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-4 sm:mb-6">Carey Okal</h2>

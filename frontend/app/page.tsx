@@ -219,13 +219,15 @@ function HomeContent() {
                   <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1">
                     <div className="bg-white rounded-lg overflow-hidden">
                 <Image
-                        src="/student_ai_chat_interface.png"
-                        alt="AI Tutor Chat Interface"
+                  src="/student_ai_chat_interface.png"
+                  alt="AI Tutor Chat Interface"
                   width={800}
                   height={1000}
                   className="w-full h-auto"
                   priority
+                  quality={85}
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 50vw"
+                  loading="eager"
                 />
               </div>
             </div>
@@ -359,10 +361,12 @@ function HomeContent() {
                   <Image
                     src={logo.src}
                     alt={logo.alt}
-                      width={200}
-                      height={120}
-                      className="relative z-10 max-w-full max-h-full object-contain transition-all duration-500 group-hover/logo:scale-105 filter grayscale-[0.3] group-hover/logo:grayscale-0"
-                    unoptimized
+                    width={200}
+                    height={120}
+                    className="relative z-10 max-w-full max-h-full object-contain transition-all duration-500 group-hover/logo:scale-105 filter grayscale-[0.3] group-hover/logo:grayscale-0"
+                    quality={75}
+                    loading="lazy"
+                    sizes="(max-width: 640px) 140px, (max-width: 1024px) 160px, 200px"
                   />
                   </div>
                 </div>
@@ -393,10 +397,12 @@ function HomeContent() {
                   <Image
                     src={logo.src}
                     alt={logo.alt}
-                      width={200}
-                      height={120}
-                      className="relative z-10 max-w-full max-h-full object-contain transition-all duration-500 group-hover/logo:scale-105 filter grayscale-[0.3] group-hover/logo:grayscale-0"
-                    unoptimized
+                    width={200}
+                    height={120}
+                    className="relative z-10 max-w-full max-h-full object-contain transition-all duration-500 group-hover/logo:scale-105 filter grayscale-[0.3] group-hover/logo:grayscale-0"
+                    quality={75}
+                    loading="lazy"
+                    sizes="(max-width: 640px) 140px, (max-width: 1024px) 160px, 200px"
                   />
                   </div>
                 </div>

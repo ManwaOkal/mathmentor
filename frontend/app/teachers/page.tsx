@@ -203,6 +203,9 @@ export default function TeachersPage() {
                       width={800}
                       height={500}
                       className="w-full h-auto"
+                      quality={85}
+                      loading="lazy"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
                     />
                   </div>
                 </div>
@@ -238,6 +241,9 @@ export default function TeachersPage() {
                       width={800}
                       height={500}
                       className="w-full h-auto"
+                      quality={85}
+                      loading="lazy"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
                     />
                   </div>
                 </div>
@@ -273,6 +279,9 @@ export default function TeachersPage() {
                       width={800}
                       height={500}
                       className="w-full h-auto"
+                      quality={85}
+                      loading="lazy"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
                     />
                   </div>
                 </div>
@@ -302,6 +311,9 @@ export default function TeachersPage() {
                       width={800}
                       height={500}
                       className="w-full h-auto"
+                      quality={85}
+                      loading="lazy"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
                     />
                   </div>
                 </div>
@@ -343,6 +355,9 @@ export default function TeachersPage() {
                       width={800}
                       height={500}
                       className="w-full h-auto"
+                      quality={85}
+                      loading="lazy"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
                     />
                   </div>
                 </div>
