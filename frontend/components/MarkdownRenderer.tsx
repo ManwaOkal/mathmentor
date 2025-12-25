@@ -17,6 +17,47 @@ interface MarkdownRendererProps {
 function preprocessLatex(content: string): string {
   if (!content.trim()) return content
   
+  // First, protect complete math expressions to avoid breaking them
+  // Temporarily replace complete expressions with placeholders
+  const completeMathExpressions: string[] = []
+  content = content.replace(/\$\$[\s\S]*?\$\$/g, (match) => {
+    completeMathExpressions.push(match)
+    return `__COMPLETE_BLOCK_MATH_${completeMathExpressions.length - 1}__`
+  })
+  content = content.replace(/\$[^$\n]+\$/g, (match) => {
+    completeMathExpressions.push(match)
+    return `__COMPLETE_INLINE_MATH_${completeMathExpressions.length - 1}__`
+  })
+  
+  // Now fix incomplete math expressions (missing closing $)
+  // This handles cases like "$x - y" that should be "$x - y$"
+  content = content.replace(/\$([a-zA-Z0-9_+\-*/=(){}[\]\s\\]+?)(?=\s|$|\.|,|;|:|\)|\(|\n|and|or|the|a|an)/g, (match, mathContent) => {
+    const trimmed = mathContent.trim()
+    
+    // Only fix if it looks like math:
+    // - Contains letters (variables) AND operators (like "x - y", "3x+2y=8")
+    // - OR single letter variable (like "x")
+    // - OR starts with letter followed by operator (like "x -")
+    // Avoid matching currency like "$5" by requiring letters or operators
+    if (trimmed && (
+      (/[a-zA-Z]/.test(trimmed) && /[\-+*/=]/.test(trimmed)) || // variable with operator
+      /^[a-zA-Z]$/.test(trimmed) || // single variable
+      /^[a-zA-Z]\s*[-+*/=]/.test(trimmed) || // variable followed by operator
+      (/^[0-9]/.test(trimmed) && /[a-zA-Z+\-*/=]/.test(trimmed)) // starts with number but has letters/operators
+    )) {
+      return `$${trimmed}$`
+    }
+    return match
+  })
+  
+  // Restore complete math expressions
+  content = content.replace(/__COMPLETE_BLOCK_MATH_(\d+)__/g, (_, index) => {
+    return completeMathExpressions[parseInt(index)] || ''
+  })
+  content = content.replace(/__COMPLETE_INLINE_MATH_(\d+)__/g, (_, index) => {
+    return completeMathExpressions[parseInt(index)] || ''
+  })
+  
   // Track replacements to avoid circular processing
   const replacements: Array<{ pattern: RegExp, replacement: string | ((match: string, ...args: any[]) => string) }> = [
     // Protect already wrapped math expressions first

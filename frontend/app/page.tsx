@@ -162,7 +162,7 @@ function HomeContent() {
             <div className="relative order-1 lg:order-2 w-full flex items-center justify-center">
               <div className="relative w-full max-w-2xl mx-auto rounded-2xl overflow-hidden shadow-2xl">
                 <Image
-                  src="/chat_intereface.png"
+                  src="/student_chat_interface.png"
                   alt="AI Tutor Chat Interface - Faster Learning, 24/7 Available, 100% Personalized, Infinite Patience, Always ready to help"
                   width={800}
                   height={1000}
