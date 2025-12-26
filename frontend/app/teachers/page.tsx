@@ -300,7 +300,13 @@ export default function TeachersPage() {
               }}>
                 <div className="p-3 text-xs font-semibold text-slate-800">Step 4</div>
               </div>
-              <div className="relative lg:order-1">
+              <div className="space-y-6 relative z-10 order-1 lg:order-2">
+                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Fine-Tune Your AI Tutor</h3>
+                <p className="text-lg text-[#737373] leading-relaxed">
+                  Customize how the AI responds by providing teaching examples. The AI learns from your style and adapts automatically.
+                </p>
+              </div>
+              <div className="relative order-2 lg:order-1">
                 <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
                   filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
                 }}>
@@ -320,12 +326,6 @@ export default function TeachersPage() {
                 <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
-              </div>
-              <div className="space-y-6 relative z-10 lg:order-2">
-                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Fine-Tune Your AI Tutor</h3>
-                <p className="text-lg text-[#737373] leading-relaxed">
-                  Customize how the AI responds by providing teaching examples. The AI learns from your style and adapts automatically.
-                </p>
               </div>
             </div>
 
@@ -376,7 +376,13 @@ export default function TeachersPage() {
               }}>
                 <div className="p-3 text-xs font-semibold text-slate-800">Step 6</div>
               </div>
-              <div className="relative lg:order-1">
+              <div className="space-y-6 relative z-10 order-1 lg:order-2">
+                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Analytics & Insights</h3>
+                <p className="text-lg text-[#737373] leading-relaxed">
+                  Monitor student engagement, view detailed analytics, and identify learning gaps with comprehensive reports.
+                </p>
+              </div>
+              <div className="relative order-2 lg:order-1">
                 <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
                   filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
                 }}>
@@ -396,12 +402,6 @@ export default function TeachersPage() {
                 <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
-              </div>
-              <div className="space-y-6 relative z-10 lg:order-2">
-                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Analytics & Insights</h3>
-                <p className="text-lg text-[#737373] leading-relaxed">
-                  Monitor student engagement, view detailed analytics, and identify learning gaps with comprehensive reports.
-                </p>
               </div>
             </div>
           </div>
