@@ -215,7 +215,7 @@ export default function TeachersPage() {
               </div>
             </div>
 
-            {/* Create & Monitor Activities - Reversed */}
+            {/* Create Activities - Reversed */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center relative">
               {/* Sticky note decoration */}
               <div className="absolute -right-8 top-8 w-28 h-28 bg-blue-100 -rotate-6 shadow-2xl hidden lg:block lg:order-2" style={{
@@ -225,9 +225,9 @@ export default function TeachersPage() {
                 <div className="p-3 text-xs font-semibold text-slate-800">Step 2</div>
               </div>
               <div className="space-y-6 relative z-10 lg:order-2">
-                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Create & Monitor Activities</h3>
+                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Create Activities</h3>
                 <p className="text-lg text-[#737373] leading-relaxed">
-                  Create engaging learning activities and manage them all in one place. Edit, organize, and track activities across your classroom.
+                  Choose whether to use your own curriculum materials or general AI knowledge sources. Create engaging learning activities tailored to your teaching style.
                 </p>
               </div>
               <div className="relative lg:order-1">
@@ -236,8 +236,8 @@ export default function TeachersPage() {
                 }}>
                   <div className="bg-white rounded-lg overflow-hidden">
                     <Image
-                      src="/teacher_activity_view.png"
-                      alt="Teacher activity view"
+                      src="/teacher_activity_creation_form.png"
+                      alt="Teacher activity creation form"
                       width={800}
                       height={500}
                       className="w-full h-auto"
@@ -253,22 +253,54 @@ export default function TeachersPage() {
               </div>
             </div>
 
-            {/* Fine-Tune Your AI Tutor */}
+            {/* Manage Created Activities */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center relative">
               {/* Sticky note decoration */}
-              <div className="absolute -left-8 top-8 w-28 h-28 bg-pink-100 rotate-6 shadow-2xl hidden lg:block" style={{
+              <div className="absolute -left-8 top-8 w-28 h-28 bg-purple-100 rotate-6 shadow-2xl hidden lg:block" style={{
                 clipPath: 'polygon(0 0, 100% 0, 100% 85%, 95% 90%, 0 90%)',
                 filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.25)) drop-shadow(0 4px 8px rgba(0,0,0,0.2))'
               }}>
                 <div className="p-3 text-xs font-semibold text-slate-800">Step 3</div>
               </div>
               <div className="space-y-6 relative z-10 lg:order-1">
-                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Fine-Tune Your AI Tutor</h3>
+                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Manage Created Activities</h3>
                 <p className="text-lg text-[#737373] leading-relaxed">
-                  Customize how the AI responds by providing teaching examples. The AI learns from your style and adapts automatically.
+                  View, edit, and organize all your learning activities in one place. Sync activities to students, update content, and manage your classroom curriculum efficiently.
                 </p>
               </div>
               <div className="relative lg:order-2">
+                <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
+                  filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
+                }}>
+                  <div className="bg-white rounded-lg overflow-hidden">
+                    <Image
+                      src="/teacher_activity_view.png"
+                      alt="Teacher activity management view"
+                      width={800}
+                      height={500}
+                      className="w-full h-auto"
+                      quality={85}
+                      loading="lazy"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                    />
+                  </div>
+                </div>
+                <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Fine-Tune Your AI Tutor - Reversed */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center relative">
+              {/* Sticky note decoration */}
+              <div className="absolute -right-8 top-8 w-28 h-28 bg-pink-100 -rotate-6 shadow-2xl hidden lg:block lg:order-2" style={{
+                clipPath: 'polygon(0 0, 100% 0, 100% 85%, 95% 90%, 0 90%)',
+                filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.25)) drop-shadow(0 4px 8px rgba(0,0,0,0.2))'
+              }}>
+                <div className="p-3 text-xs font-semibold text-slate-800">Step 4</div>
+              </div>
+              <div className="relative lg:order-1">
                 <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
                   filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
                 }}>
@@ -289,18 +321,30 @@ export default function TeachersPage() {
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
+              <div className="space-y-6 relative z-10 lg:order-2">
+                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Fine-Tune Your AI Tutor</h3>
+                <p className="text-lg text-[#737373] leading-relaxed">
+                  Customize how the AI responds by providing teaching examples. The AI learns from your style and adapts automatically.
+                </p>
+              </div>
             </div>
 
-            {/* Individual Student Performance - Reversed */}
+            {/* Track Individual Progress */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center relative">
               {/* Sticky note decoration */}
-              <div className="absolute -right-8 top-8 w-28 h-28 bg-green-100 -rotate-6 shadow-2xl hidden lg:block lg:order-2" style={{
+              <div className="absolute -left-8 top-8 w-28 h-28 bg-green-100 rotate-6 shadow-2xl hidden lg:block" style={{
                 clipPath: 'polygon(0 0, 100% 0, 100% 85%, 95% 90%, 0 90%)',
                 filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.25)) drop-shadow(0 4px 8px rgba(0,0,0,0.2))'
               }}>
-                <div className="p-3 text-xs font-semibold text-slate-800">Step 4</div>
+                <div className="p-3 text-xs font-semibold text-slate-800">Step 5</div>
               </div>
-              <div className="relative order-2 lg:order-1">
+              <div className="space-y-6 relative z-10 lg:order-1">
+                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Track Individual Progress</h3>
+                <p className="text-lg text-[#737373] leading-relaxed">
+                  See how each student performs across all activities. Identify strengths, weaknesses, and learning patterns to provide targeted support.
+                </p>
+              </div>
+              <div className="relative lg:order-2">
                 <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
                   filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
                 }}>
@@ -321,30 +365,18 @@ export default function TeachersPage() {
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
-              <div className="space-y-6 relative z-10 order-1 lg:order-2">
-                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Track Individual Progress</h3>
-                <p className="text-lg text-[#737373] leading-relaxed">
-                  See how each student performs across all activities. Identify strengths, weaknesses, and learning patterns to provide targeted support.
-                </p>
-              </div>
             </div>
 
-            {/* Analytics */}
+            {/* Analytics & Insights - Reversed */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center relative">
               {/* Sticky note decoration */}
-              <div className="absolute -left-8 top-8 w-28 h-28 bg-purple-100 rotate-6 shadow-2xl hidden lg:block" style={{
+              <div className="absolute -right-8 top-8 w-28 h-28 bg-purple-100 -rotate-6 shadow-2xl hidden lg:block lg:order-2" style={{
                 clipPath: 'polygon(0 0, 100% 0, 100% 85%, 95% 90%, 0 90%)',
                 filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.25)) drop-shadow(0 4px 8px rgba(0,0,0,0.2))'
               }}>
-                <div className="p-3 text-xs font-semibold text-slate-800">Step 5</div>
+                <div className="p-3 text-xs font-semibold text-slate-800">Step 6</div>
               </div>
-              <div className="space-y-6 relative z-10">
-                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Analytics & Insights</h3>
-                <p className="text-lg text-[#737373] leading-relaxed">
-                  Monitor student engagement, view detailed analytics, and identify learning gaps with comprehensive reports.
-                </p>
-              </div>
-              <div className="relative">
+              <div className="relative lg:order-1">
                 <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
                   filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
                 }}>
@@ -364,6 +396,12 @@ export default function TeachersPage() {
                 <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
+              </div>
+              <div className="space-y-6 relative z-10 lg:order-2">
+                <h3 className="text-3xl sm:text-4xl font-semibold text-[#1f1f1f] leading-tight">Analytics & Insights</h3>
+                <p className="text-lg text-[#737373] leading-relaxed">
+                  Monitor student engagement, view detailed analytics, and identify learning gaps with comprehensive reports.
+                </p>
               </div>
             </div>
           </div>

@@ -40,3 +40,5 @@ USING (true);
 -- Add comment
 COMMENT ON TABLE public.newsletter_subscriptions IS 'Stores newsletter subscription emails from the landing page and other sources';
 
+
+

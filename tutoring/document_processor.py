@@ -71,23 +71,28 @@ class DocumentProcessor:
             
             file_url = document['file_url']
             
+            print(f"[DocumentProcessor] Updating status to 'processing' for {document_id}")
             # Update status to processing
             self.supabase.table('teacher_documents').update({
                 'status': 'processing'
             }).eq('document_id', document_id).execute()
             
+            print(f"[DocumentProcessor] Downloading file from {file_url}")
             # Extract text from file
             text = await self._extract_text_from_file(file_url, document.get('file_type'))
+            print(f"[DocumentProcessor] Extracted {len(text)} characters from document")
             
             if not text:
                 raise ValueError("Failed to extract text from document")
             
             # Chunk the document
+            print(f"[DocumentProcessor] Chunking document...")
             chunks = self.chunker.chunk_by_difficulty(
                 text,
                 document.get('difficulty', 'intermediate'),
                 document.get('title', 'Document')
             )
+            print(f"[DocumentProcessor] Created {len(chunks)} chunks")
             
             # Add document metadata to chunks
             for i, chunk in enumerate(chunks):
@@ -100,12 +105,15 @@ class DocumentProcessor:
                     'document_type': document.get('file_type', 'unknown')
                 }
             
-            # Generate embeddings
+            # Generate embeddings (this can take time - OpenAI API calls)
+            print(f"[DocumentProcessor] Generating embeddings for {len(chunks)} chunks (this may take a moment)...")
             chunks = self.embedder.embed_chunks(chunks)
+            print(f"[DocumentProcessor] Embeddings generated successfully")
             
             # Store chunks in database
+            print(f"[DocumentProcessor] Storing {len(chunks)} chunks in database...")
             chunk_ids = []
-            for chunk in chunks:
+            for i, chunk in enumerate(chunks):
                 chunk_data = {
                     'document_id': document_id,
                     'content': chunk['content'],
@@ -118,7 +126,12 @@ class DocumentProcessor:
                 result = self.supabase.table('document_chunks').insert(chunk_data).execute()
                 if result.data:
                     chunk_ids.append(result.data[0]['chunk_id'])
+                
+                # Log progress every 10 chunks
+                if (i + 1) % 10 == 0:
+                    print(f"[DocumentProcessor] Stored {i + 1}/{len(chunks)} chunks...")
             
+            print(f"[DocumentProcessor] All chunks stored. Updating document status to 'ready'...")
             # Update document status
             self.supabase.table('teacher_documents').update({
                 'status': 'ready',
@@ -128,6 +141,7 @@ class DocumentProcessor:
                     'processed_at': 'now()'
                 }
             }).eq('document_id', document_id).execute()
+            print(f"[DocumentProcessor] Document {document_id} marked as 'ready' with {len(chunk_ids)} chunks")
             
             return {
                 'success': True,

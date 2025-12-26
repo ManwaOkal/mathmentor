@@ -20,6 +20,10 @@ def get_supabase_client() -> Client:
             "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment variables"
         )
     
+    # Ensure URL has trailing slash (required by Supabase client)
+    if not supabase_url.endswith('/'):
+        supabase_url = supabase_url + '/'
+    
     return create_client(supabase_url, supabase_key)
 
 
@@ -36,6 +40,10 @@ def get_supabase_anon_client() -> Client:
         raise ValueError(
             "SUPABASE_URL and SUPABASE_ANON_KEY must be set in environment variables"
         )
+    
+    # Ensure URL has trailing slash (required by Supabase client)
+    if not supabase_url.endswith('/'):
+        supabase_url = supabase_url + '/'
     
     return create_client(supabase_url, supabase_key)
 

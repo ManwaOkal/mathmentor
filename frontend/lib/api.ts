@@ -17,12 +17,23 @@ class ApiClient {
   private baseUrl: string
   private cache: Map<string, CacheEntry<any>> = new Map()
   private pendingRequests: Map<string, Promise<any>> = new Map()
+  private cacheCleanupInterval: NodeJS.Timeout | null = null
 
   constructor() {
     // Normalize baseUrl: remove trailing slash to prevent double slashes
     this.baseUrl = API_URL.replace(/\/+$/, '')
-    // Clean cache every 10 minutes
-    setInterval(() => this.cleanCache(), 10 * 60 * 1000)
+    // Clean cache every 10 minutes (only in browser environment)
+    if (typeof window !== 'undefined') {
+      this.cacheCleanupInterval = setInterval(() => this.cleanCache(), 10 * 60 * 1000)
+    }
+  }
+
+  // Cleanup method to clear intervals (useful for testing or cleanup)
+  cleanup() {
+    if (this.cacheCleanupInterval) {
+      clearInterval(this.cacheCleanupInterval)
+      this.cacheCleanupInterval = null
+    }
   }
 
   private cleanCache() {
@@ -131,7 +142,7 @@ class ApiClient {
           ...options,
           headers,
           signal: controller.signal,
-          keepalive: options.keepalive ?? false, // Preserve keepalive option
+          keepalive: false, // Disable keepalive to prevent connection leaks
         })
 
         clearTimeout(timeoutId)
@@ -469,11 +480,11 @@ class ApiClient {
 
   async getClassroomDocuments(classroomId: string, skipCache: boolean = false): Promise<{ documents: any[] }> {
     // For polling, skip cache to always get fresh status
-    const cacheKey = this.getCacheKey(`/api/teacher/documents/${classroomId}`, undefined)
+    const cacheKey = this.getCacheKey(`/api/teacher/documents/classroom/${classroomId}`, undefined)
     if (skipCache) {
       this.cache.delete(cacheKey)
     }
-    return this.request<{ documents: any[] }>(`/api/teacher/documents/${classroomId}`, {}, !skipCache)
+    return this.request<{ documents: any[] }>(`/api/teacher/documents/classroom/${classroomId}`, {}, !skipCache)
   }
 
   async getClassroomAnalytics(classroomId: string, timeRange: string = 'week', sessionToken?: string): Promise<any> {
@@ -627,9 +638,7 @@ class ApiClient {
   }
 
   // Get document info
-  async getDocument(documentId: string): Promise<{ title: string }> {
-    return this.request(`/api/teacher/documents/${documentId}`, {}, true)
-  }
+  // Removed duplicate getDocument - using the one below with proper error handling
 
   async getClassroomActivities(classroomId: string, sessionToken?: string): Promise<any[]> {
     const token = sessionToken || await this.getAuthToken()
@@ -783,6 +792,8 @@ class ApiClient {
     teaching_style: string
     estimated_time_minutes: number
     classroom_id?: string
+    knowledge_source_mode?: 'TEACHER_DOCS' | 'GENERAL'
+    document_ids?: string[]
     },
     sessionToken?: string
   ): Promise<{ 
@@ -814,6 +825,89 @@ class ApiClient {
     }
 
     return await response.json()
+  }
+
+  async uploadActivityDocument(
+    file: File,
+    classroomId: string,
+    title: string,
+    description?: string,
+    sessionToken?: string
+  ): Promise<any> {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('metadata', JSON.stringify({
+      classroom_id: classroomId,
+      title,
+      description,
+      generate_activities: false, // Don't auto-generate activities for activity-specific uploads
+      chunking_strategy: 'semantic'
+    }))
+
+    const url = `${this.baseUrl}/api/teacher/documents/upload`
+    const token = sessionToken || await this.getAuthToken()
+    const headers: Record<string, string> = {}
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+      headers,
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }))
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
+  }
+
+  async getDocument(documentId: string, sessionToken?: string): Promise<any> {
+    const token = sessionToken || await this.getAuthToken()
+    if (!token) {
+      throw new Error('Authentication required. Please log in again.')
+    }
+
+    const url = `${this.baseUrl}/api/teacher/documents/${documentId}`
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }))
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    console.log(`[API] getDocument raw response for ${documentId}:`, JSON.stringify(data, null, 2))
+    
+    // Handle case where response might be wrapped incorrectly
+    if (data && typeof data === 'object') {
+      // If response has a 'documents' array, that's wrong - should be direct document object
+      // This might happen if the wrong endpoint is hit
+      if (data.documents && Array.isArray(data.documents)) {
+        console.error(`[API] ERROR: Got documents array instead of document object! Response:`, data)
+        // Try to find the document in the array
+        const doc = data.documents.find((d: any) => d.document_id === documentId)
+        if (doc) {
+          console.log(`[API] Found document in array:`, doc)
+          return doc
+        }
+        throw new Error(`Document ${documentId} not found in response`)
+      }
+      // Return the data directly (should be the document object)
+      console.log(`[API] Returning document data:`, data)
+      return data
+    }
+    
+    throw new Error(`Invalid response format for document ${documentId}`)
   }
 
   async getClassroomStudents(classroomId: string): Promise<any> {
@@ -1349,7 +1443,15 @@ class ApiClient {
   }
 }
 
+// Singleton API client instance
 export const api = new ApiClient()
+
+// Cleanup on page unload to prevent memory leaks
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    api.cleanup()
+  })
+}
 
 export interface QuestionRequest {
   question: string

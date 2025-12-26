@@ -86,22 +86,22 @@ function TeacherPageContent() {
   // This will be handled by the sidebar selection
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 w-full">
       {/* Section Content */}
       {activeSection === 'activities' && (
-        <div>
-          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 sm:gap-4 mb-8 sm:mb-6">
+        <div className="w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
-              <p className="text-xs sm:text-sm text-slate-500 font-light">Manage and organize your learning activities</p>
+              <p className="text-sm text-slate-600">Manage and organize your learning activities</p>
             </div>
-            <div className="flex gap-2 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <button
                 onClick={(e) => {
                   e.preventDefault()
                   handleSyncActivities()
                 }}
                 disabled={syncing || !activeClassroom || !session?.access_token}
-                className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 title={!activeClassroom || !session?.access_token ? 'Please select a classroom' : 'Sync activities to all students'}
               >
                 <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />

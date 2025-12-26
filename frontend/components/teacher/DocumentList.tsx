@@ -30,11 +30,14 @@ export default function DocumentList({ classroomId, onSelectDocument }: Document
 
   useEffect(() => {
     loadDocuments()
-    // Refresh every 2 seconds to check processing status (faster polling)
+    // Refresh every 5 seconds to check processing status (reduced from 2s to prevent connection leaks)
     // Continue polling even if there are errors
+    let isMounted = true
     const interval = setInterval(() => {
+      if (!isMounted) return
       // Skip cache to always get fresh status during polling
       loadDocuments(true).catch(err => {
+        if (!isMounted) return
         // Silently handle errors - don't stop polling
         const isTimeout = err?.message?.includes('timeout') || err?.message?.includes('Request timeout')
         if (!isTimeout) {
@@ -42,8 +45,11 @@ export default function DocumentList({ classroomId, onSelectDocument }: Document
         }
         // Continue polling even on timeout - status will update on next successful poll
       })
-    }, 2000) // Poll every 2 seconds for faster status updates
-    return () => clearInterval(interval)
+    }, 5000) // Poll every 5 seconds (reduced frequency to prevent connection leaks)
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
   }, [classroomId])
 
   const loadDocuments = async (skipCache: boolean = false) => {

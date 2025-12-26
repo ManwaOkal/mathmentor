@@ -252,58 +252,36 @@ export default function ActivityList({ classroomId, onSelectActivity }: Activity
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* List-based structure with depth on interaction */}
-      <div className="space-y-0">
+    <div className="w-full max-w-5xl mx-auto px-2 sm:px-4">
+      {/* Cleaner list structure */}
+      <div className="space-y-3">
         {activities.map((activity) => (
           <div
             key={activity.activity_id}
-            className="group relative"
+            className="group relative bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-md transition-all duration-200 overflow-hidden"
           >
-            {/* Subtle left accent bar */}
-            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-slate-200 group-hover:bg-slate-400 transition-colors duration-200 rounded-full" />
-            
-            <div className="w-full flex items-center justify-between pl-6 pr-3 sm:pl-8 sm:pr-4 py-5 sm:py-6 hover:bg-slate-50/50 transition-all duration-200 rounded-lg mb-2 shadow-md hover:shadow-lg">
-              <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-                {/* Icon - floating, no container */}
-                <div className="flex-shrink-0">
-                  <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-slate-400 group-hover:text-slate-600 transition-colors" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 sm:p-5">
+              {/* Main Content */}
+              <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                {/* Icon */}
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
+                    <BookOpen className="w-5 h-5 text-slate-600" />
+                  </div>
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm sm:text-base text-slate-900 truncate mb-1">
+                  <h3 className="font-semibold text-base sm:text-lg text-slate-900 mb-2 line-clamp-2">
                     {activity.title}
-                  </div>
-                  {activity.description && (
-                    <p className="text-xs sm:text-sm text-slate-500 line-clamp-1 mb-2">
-                      {activity.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                    {(() => {
-                      const settings = activity.settings || {}
-                      const metadata = activity.metadata || {}
-                      const teachingStyle = settings.teaching_style || metadata.teaching_style || 'guided'
-                      const teachingStyleLabels: Record<string, string> = {
-                        'socratic': 'Socratic',
-                        'direct': 'Direct',
-                        'guided': 'Guided',
-                        'discovery': 'Discovery',
-                        'teacher': 'Teacher'
-                      }
-                      return (
-                        <span className="text-xs text-slate-500 capitalize">
-                          {teachingStyleLabels[teachingStyle] || teachingStyle}
-                        </span>
-                      )
-                    })()}
-                    <span className="text-xs text-slate-400">•</span>
-                    <span className="text-xs text-slate-500 capitalize">
+                  </h3>
+                  
+                  {/* Minimal metadata - Only essential info */}
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700 capitalize">
                       {activity.difficulty}
                     </span>
-                    <span className="text-xs text-slate-400">•</span>
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <span className="inline-flex items-center gap-1 text-xs text-slate-500">
                       <Calendar className="w-3 h-3" />
                       {new Date(activity.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
@@ -311,12 +289,12 @@ export default function ActivityList({ classroomId, onSelectActivity }: Activity
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-2 flex-shrink-0 ml-3 sm:ml-4">
+              {/* Actions - Better mobile layout */}
+              <div className="flex items-center gap-2 flex-shrink-0 sm:ml-4 border-t border-slate-100 pt-3 sm:border-t-0 sm:pt-0">
                 {onSelectActivity && (
                   <button
                     onClick={() => onSelectActivity(activity.activity_id)}
-                    className="px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                    className="px-3 py-2 text-sm font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors flex-1 sm:flex-none"
                     title="View details"
                   >
                     View
@@ -324,10 +302,10 @@ export default function ActivityList({ classroomId, onSelectActivity }: Activity
                 )}
                 <button
                   onClick={() => handleEditClick(activity)}
-                  className="p-2 rounded-lg transition-colors text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                  className="p-2 rounded-lg transition-colors text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                   title="Edit activity"
                 >
-                  <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Edit className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleDeleteClick(activity)}
@@ -335,14 +313,14 @@ export default function ActivityList({ classroomId, onSelectActivity }: Activity
                   className={`p-2 rounded-lg transition-colors ${
                     deletingActivityId === activity.activity_id
                       ? 'text-slate-400 cursor-not-allowed'
-                      : 'text-slate-400 hover:text-red-600 hover:bg-red-50'
+                      : 'text-slate-500 hover:text-red-600 hover:bg-red-50'
                   }`}
                   title="Delete activity"
                 >
                   {deletingActivityId === activity.activity_id ? (
-                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                    <Clock className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Trash2 className="w-4 h-4" />
                   )}
                 </button>
               </div>

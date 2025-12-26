@@ -88,8 +88,13 @@ class FileStorage:
             if not supabase_url:
                 raise ValueError("SUPABASE_URL environment variable not set")
             
-            # Construct public URL
-            public_url = f"{supabase_url}/storage/v1/object/public/{self.bucket_name}/{file_path}"
+            # Ensure URL has trailing slash for consistency
+            if not supabase_url.endswith('/'):
+                supabase_url = supabase_url + '/'
+            
+            # Construct public URL (remove trailing slash before appending path)
+            supabase_url_clean = supabase_url.rstrip('/')
+            public_url = f"{supabase_url_clean}/storage/v1/object/public/{self.bucket_name}/{file_path}"
             return public_url
                 
         except Exception as e:
@@ -141,6 +146,10 @@ class FileStorage:
         if self.provider == 'supabase':
             file_path = f"{folder}/{filename}"
             supabase_url = os.getenv("SUPABASE_URL")
+            
+            # Ensure URL doesn't have double slashes
+            if supabase_url and supabase_url.endswith('/'):
+                supabase_url = supabase_url.rstrip('/')
             
             return {
                 "upload_url": f"{supabase_url}/storage/v1/object/{self.bucket_name}/{file_path}",

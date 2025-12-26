@@ -701,6 +701,31 @@ async def conversational_tutor(
         if not os.getenv("OPENAI_API_KEY"):
             raise HTTPException(status_code=500, detail="AI tutor not available. OPENAI_API_KEY not configured.")
         
+        # Determine knowledge source mode (runtime truth check)
+        knowledge_source_mode = activity.get('knowledge_source_mode', 'GENERAL')
+        
+        # Get activity documents if TEACHER_DOCS mode
+        activity_document_ids = []
+        if knowledge_source_mode == 'TEACHER_DOCS':
+            # Get linked documents for this activity
+            activity_docs_result = supabase.table('activity_documents').select('document_id').eq('activity_id', request.activity_id).eq('is_active', True).execute()
+            if activity_docs_result.data:
+                activity_document_ids = [doc['document_id'] for doc in activity_docs_result.data]
+            
+            # Verify documents are ready
+            if activity_document_ids:
+                docs_check = supabase.table('teacher_documents').select('document_id, status').in_('document_id', activity_document_ids).execute()
+                ready_docs = [d['document_id'] for d in (docs_check.data or []) if d.get('status') == 'ready']
+                if not ready_docs:
+                    # Fallback to GENERAL if no ready documents
+                    knowledge_source_mode = 'GENERAL'
+                    activity_document_ids = []
+                else:
+                    activity_document_ids = ready_docs
+            else:
+                # No documents linked, fallback to GENERAL
+                knowledge_source_mode = 'GENERAL'
+        
         # Get questions if available
         questions_result = supabase.table('activity_questions').select('*').eq('activity_id', request.activity_id).order('created_at').execute()
         questions = questions_result.data if questions_result.data else []
@@ -783,11 +808,116 @@ async def conversational_tutor(
         # Generate conversational response
         generator = ResponseGenerator()
         
-        # Check if this is a document-based activity with intelligent processing
+        # Retrieve document chunks if TEACHER_DOCS mode
+        retrieved_chunks = []
+        if knowledge_source_mode == 'TEACHER_DOCS' and activity_document_ids:
+            try:
+                from data_processing.embeddings import EmbeddingGenerator
+                from data_processing.vector_store import VectorStore
+                
+                # Generate query embedding
+                embedder = EmbeddingGenerator()
+                student_query = request.student_response or ''
+                if not student_query and request.conversation_history:
+                    # Get last user message
+                    for msg in reversed(request.conversation_history):
+                        if msg.get('role') == 'user':
+                            student_query = msg.get('content', '')
+                            break
+                
+                if student_query:
+                    query_embedding = embedder.generate_embedding(student_query)
+                    
+                    # Vector search across activity documents
+                    # Query each document and combine results
+                    all_chunks = []
+                    for doc_id in activity_document_ids:
+                        try:
+                            # Use the match_document_chunks function for each document
+                            chunks_result = supabase.rpc('match_document_chunks', {
+                                'query_embedding': query_embedding,
+                                'p_document_id': doc_id,
+                                'match_threshold': 0.7,
+                                'match_count': 5  # Get top 5 per document
+                            }).execute()
+                            
+                            if chunks_result.data:
+                                all_chunks.extend([chunk.get('content', '') for chunk in chunks_result.data if chunk.get('content')])
+                        except Exception as rpc_error:
+                            # Fallback: get chunks directly (filtered by document_id only)
+                            # Note: We filter by document_id from activity_documents, ensuring activity-specific retrieval
+                            print(f"RPC error for doc {doc_id}, using direct query: {rpc_error}")
+                            chunks_result = supabase.table('document_chunks').select('content').eq('document_id', doc_id).limit(5).execute()
+                            if chunks_result.data:
+                                all_chunks.extend([chunk.get('content', '') for chunk in chunks_result.data if chunk.get('content')])
+                    
+                    # Take top 10 chunks across all documents
+                    retrieved_chunks = all_chunks[:10]
+            except Exception as e:
+                print(f"Error retrieving document chunks: {e}")
+                # If retrieval fails, fallback to GENERAL mode
+                knowledge_source_mode = 'GENERAL'
+                retrieved_chunks = []
+        
+        # Check if this is a document-based activity with intelligent processing (legacy check)
         activity_metadata = activity.get('metadata', {})
         is_document_based = activity_metadata.get('generation_method') == 'llm_document_based'
         
-        if is_document_based:
+        # Use TEACHER_DOCS mode if chunks retrieved or legacy document-based
+        if knowledge_source_mode == 'TEACHER_DOCS' and (retrieved_chunks or is_document_based):
+            # Use retrieved chunks for strict teacher-only mode
+            if retrieved_chunks:
+                # Build prompt with retrieved chunks only (strict mode)
+                activity_metadata = activity.get('metadata', {})
+                settings = activity.get('settings', {})
+                teaching_style = activity.get('teaching_style') or settings.get('teaching_style') or activity_metadata.get('teaching_style') or 'guided'
+                difficulty = activity.get('difficulty', 'intermediate')
+                topic = activity.get('topic') or settings.get('topic') or activity_metadata.get('topic') or ''
+                
+                # Format chunks as context
+                context_text = "\n\n".join([
+                    f"Excerpt {i+1}:\n{chunk}"
+                    for i, chunk in enumerate(retrieved_chunks[:6])  # Limit to top 6 chunks
+                ])
+                
+                # Create strict teacher-only prompt
+                system_instruction = f"""You are a math tutor teaching: {activity.get('title', 'Math Activity')}
+Topic: {topic}
+Teaching Style: {teaching_style}
+Difficulty: {difficulty}
+
+CRITICAL RULES:
+1. Answer ONLY using the provided excerpts from the teacher's uploaded materials
+2. If the student asks something NOT covered in the excerpts, say: "I can't find this topic in the uploaded materials for this activity."
+3. Do NOT use any outside knowledge - only use what's in the excerpts
+4. Follow the teacher's notation and methods from the excerpts
+5. If excerpts don't contain enough information to answer, say it's not covered
+
+TEACHER'S MATERIALS:
+{context_text}
+
+Student's question/response: {request.student_response or 'Continue teaching'}
+Conversation history: {len(request.conversation_history)} messages
+Current phase: {teaching_phase}
+"""
+                
+                prompt = system_instruction
+            else:
+                # No chunks retrieved - tell student it's not covered
+                prompt = f"""The student asked: "{request.student_response or 'Continue'}"
+                
+                However, I cannot find relevant information in the uploaded materials for this activity.
+                Please respond: "I can't find this topic in the uploaded materials for this activity. Please ask your teacher for clarification."
+                """
+        elif knowledge_source_mode == 'TEACHER_DOCS' and not retrieved_chunks:
+            # TEACHER_DOCS mode but no chunks found
+            prompt = f"""The student asked: "{request.student_response or 'Continue'}"
+            
+            However, I cannot find relevant information in the uploaded materials for this activity.
+            Please respond: "I can't find this topic in the uploaded materials for this activity. Please ask your teacher for clarification."
+            """
+        else:
+            # Legacy document-based or GENERAL mode
             # Get document segments from document metadata
             document_id = activity.get('document_id')
             document_segments = []
@@ -875,67 +1005,6 @@ async def conversational_tutor(
                         teaching_style=teaching_style,
                         difficulty=difficulty
                     )
-        else:
-            # Use regular prompt for non-document-based activities
-            activity_metadata = activity.get('metadata', {})
-            settings = activity.get('settings', {})
-            teaching_style = settings.get('teaching_style') or activity_metadata.get('teaching_style') or 'guided'
-            difficulty = activity.get('difficulty', 'intermediate')
-            
-            # Get all teaching examples for this teacher (applies to all activities)
-            teaching_examples = []
-            try:
-                teacher_id = activity.get('teacher_id')
-                
-                # Get all examples for this teacher (applies globally to all activities)
-                examples_result = supabase.table('teaching_examples').select('*').eq('teacher_id', teacher_id).order('created_at', desc=True).limit(10).execute()
-                teaching_examples = examples_result.data if examples_result.data else []
-            except Exception as e:
-                print(f"Error fetching teaching examples: {e}")
-                teaching_examples = []
-            
-            # Use activity-specific fine-tuning if examples are available
-            if teaching_examples:
-                # Get topic from settings/metadata/title
-                topic = settings.get('topic') or activity_metadata.get('topic') or activity.get('title', '')
-                
-                # Extract student input from conversation history or student response
-                student_input = request.student_response
-                if not student_input and request.conversation_history:
-                    # Get the last user message
-                    for msg in reversed(request.conversation_history):
-                        if msg.get('role') == 'user':
-                            student_input = msg.get('content', '')
-                            break
-                if not student_input:
-                    student_input = ''
-                
-                prompt = format_activity_specific_finetuned_prompt(
-                    student_input=student_input,
-                    teaching_examples=teaching_examples,
-                    activity_id=request.activity_id,
-                    activity_title=activity.get('title', 'Math Activity'),
-                    activity_description=activity.get('description', ''),
-                    teaching_style=teaching_style,
-                    difficulty=difficulty,
-                    topic=topic,
-                    conversation_history=request.conversation_history,
-                    teaching_phase=teaching_phase
-                )
-            else:
-                # Fallback to regular prompt without fine-tuning
-                prompt = format_conversational_tutor_prompt(
-                    activity_title=activity.get('title', 'Math Activity'),
-                    activity_description=activity.get('description', ''),
-                    questions=questions,
-                    conversation_history=request.conversation_history,
-                    current_question_index=request.current_question_index,
-                    student_response=request.student_response,
-                    current_question=current_question,
-                    teaching_phase=teaching_phase,
-                    teaching_style=teaching_style,
-                    difficulty=difficulty
-                )
         
         # Add explicit correctness instruction to prompt if answer is correct
         if is_answer_correct and teaching_phase == "questioning":

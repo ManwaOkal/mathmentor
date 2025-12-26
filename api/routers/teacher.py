@@ -95,6 +95,8 @@ class CreateConversationalActivityRequest(BaseModel):
     teaching_style: str = "guided"
     estimated_time_minutes: int = 15
     classroom_id: Optional[str] = None
+    knowledge_source_mode: Optional[str] = "GENERAL"  # TEACHER_DOCS or GENERAL
+    document_ids: Optional[List[str]] = None  # List of document IDs to link to activity
 
 # Helper function to get current teacher (simplified - in production, verify JWT)
 async def get_current_teacher(authorization: Optional[str] = Header(None)):
@@ -237,6 +239,7 @@ async def get_teacher_classrooms(user: dict = Depends(get_current_teacher)):
 async def upload_document(
     file: UploadFile = File(...),
     metadata: str = Form(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     user: dict = Depends(get_current_teacher)
 ):
     """Upload and process teacher document."""
@@ -266,6 +269,10 @@ async def upload_document(
                 detail=f"Failed to upload file to storage: {str(storage_error)}"
             )
         
+        # Normalize file type (truncate if too long - migration 014 will increase column size)
+        original_file_type = file.content_type or 'application/octet-stream'
+        file_type = original_file_type[:50] if len(original_file_type) > 50 else original_file_type
+        
         # Create document record
         document_data = {
             'teacher_id': user['id'],
@@ -274,13 +281,14 @@ async def upload_document(
             'description': metadata_dict.get('description'),
             'filename': file.filename,
             'file_url': file_url,
-            'file_type': file.content_type or 'application/octet-stream',
+            'file_type': file_type,
             'file_size': len(file_content),
             'status': 'processing',
             'metadata': {
                 'generate_activities': metadata_dict.get('generate_activities', True),
                 'chunking_strategy': metadata_dict.get('chunking_strategy', 'semantic'),
-                'storage_filename': unique_filename  # Store the unique filename for later deletion
+                'storage_filename': unique_filename,  # Store the unique filename for later deletion
+                'original_content_type': file.content_type  # Store full MIME type in metadata
             }
         }
         
@@ -298,22 +306,40 @@ async def upload_document(
         
         # Trigger async document processing
         # Process document: extract text, chunk, generate embeddings, store chunks
-        try:
-            from tutoring.document_processor import DocumentProcessor
-            processor = DocumentProcessor()
-            
-            # Process in background (non-blocking)
-            asyncio.create_task(processor.process_document(document_id))
-        except Exception as e:
-            # If processing fails, log error but don't fail upload
-            print(f"Warning: Could not start document processing: {e}")
-            # Mark as ready anyway (processing can be retried later)
+        # Note: Files are stored in Supabase Storage, OpenAI is used for embeddings/parsing
+        async def process_document_background(doc_id: str):
+            """Background task to process document"""
             try:
-                supabase.table('teacher_documents').update({
-                    'status': 'ready'
-                }).eq('document_id', document_id).execute()
-            except:
-                pass
+                print(f"[Background] ===== Starting document processing for {doc_id} =====")
+                from tutoring.document_processor import DocumentProcessor
+                processor = DocumentProcessor()
+                
+                print(f"[Background] Processor created, calling process_document...")
+                result = await processor.process_document(doc_id)
+                print(f"[Background] ===== Document processing completed for {doc_id}: {result} =====")
+            except Exception as proc_error:
+                import traceback
+                error_trace = traceback.format_exc()
+                print(f"[Background] ===== ERROR processing document {doc_id} =====")
+                print(f"[Background] Error: {proc_error}")
+                print(f"[Background] Traceback: {error_trace}")
+                # Update status to failed
+                try:
+                    supabase_client = get_supabase_client()
+                    supabase_client.table('teacher_documents').update({
+                        'status': 'failed',
+                        'metadata': {
+                            'error': str(proc_error),
+                            'error_trace': error_trace
+                        }
+                    }).eq('document_id', doc_id).execute()
+                    print(f"[Background] Updated document status to 'failed'")
+                except Exception as update_error:
+                    print(f"[Background] Failed to update document status: {update_error}")
+        
+        # Add background task - FastAPI BackgroundTasks can handle async functions
+        background_tasks.add_task(process_document_background, document_id)
+        print(f"✓ Added background task for document {document_id} (will process asynchronously)")
         
         return {
             "document_id": document_id,
@@ -326,21 +352,11 @@ async def upload_document(
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Document upload error: {str(e)}")
+        print(f"Traceback: {error_trace}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
-
-@router.get("/documents/{classroom_id}")
-async def get_classroom_documents(
-    classroom_id: str,
-    user: dict = Depends(get_current_teacher)
-):
-    """Get all documents for a classroom."""
-    try:
-        supabase = get_supabase_client()
-        result = supabase.table('teacher_documents').select('*').eq('classroom_id', classroom_id).eq('teacher_id', user['id']).order('uploaded_at', desc=True).execute()
-        
-        return {"documents": result.data if result.data else []}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/documents/{document_id}/process-intelligent")
 async def process_document_intelligently(
@@ -639,11 +655,11 @@ async def get_document(
     document_id: str,
     user: dict = Depends(get_current_teacher)
 ):
-    """Get document information"""
+    """Get document information including status"""
     try:
         supabase = get_supabase_client()
         
-        doc_result = supabase.table('teacher_documents').select('document_id, title, description, created_at').eq('document_id', document_id).eq('teacher_id', user['id']).single().execute()
+        doc_result = supabase.table('teacher_documents').select('document_id, title, description, filename, file_type, file_size, status, metadata, uploaded_at').eq('document_id', document_id).eq('teacher_id', user['id']).single().execute()
         
         if not doc_result.data:
             raise HTTPException(status_code=404, detail="Document not found")
@@ -651,6 +667,20 @@ async def get_document(
         return doc_result.data
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/documents/classroom/{classroom_id}")
+async def get_classroom_documents(
+    classroom_id: str,
+    user: dict = Depends(get_current_teacher)
+):
+    """Get all documents for a classroom."""
+    try:
+        supabase = get_supabase_client()
+        result = supabase.table('teacher_documents').select('*').eq('classroom_id', classroom_id).eq('teacher_id', user['id']).order('uploaded_at', desc=True).execute()
+        
+        return {"documents": result.data if result.data else []}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2533,6 +2563,30 @@ Keep it concise - focus on key teaching points and conversation structure."""
         if request.classroom_id:
             activity_metadata['classroom_id'] = request.classroom_id
         
+        # Determine knowledge source mode (enforce fallback if TEACHER_DOCS but no docs)
+        knowledge_source_mode = request.knowledge_source_mode or "GENERAL"
+        document_ids = request.document_ids or []
+        
+        # Validate: if TEACHER_DOCS mode, ensure documents exist and are ready
+        if knowledge_source_mode == "TEACHER_DOCS":
+            if not document_ids:
+                # Fallback to GENERAL if no documents provided
+                knowledge_source_mode = "GENERAL"
+            else:
+                # Verify documents exist and are ready
+                docs_result = supabase.table('teacher_documents').select('document_id, status').in_('document_id', document_ids).eq('teacher_id', user['id']).execute()
+                if docs_result.data:
+                    ready_docs = [d['document_id'] for d in docs_result.data if d.get('status') == 'ready']
+                    if not ready_docs:
+                        # Fallback to GENERAL if no ready documents
+                        knowledge_source_mode = "GENERAL"
+                    else:
+                        # Only use ready documents
+                        document_ids = ready_docs
+                else:
+                    knowledge_source_mode = "GENERAL"
+                    document_ids = []
+        
         activity_data = {
             'activity_id': activity_id,
             'teacher_id': user['id'],
@@ -2541,7 +2595,10 @@ Keep it concise - focus on key teaching points and conversation structure."""
             'activity_type': 'conversational',
             'difficulty': request.difficulty,
             'estimated_time_minutes': request.estimated_time_minutes,
-            'settings': activity_metadata  # Use settings column (exists in schema)
+            'settings': activity_metadata,  # Use settings column (exists in schema)
+            'knowledge_source_mode': knowledge_source_mode,
+            'topic': request.topic,
+            'teaching_style': request.teaching_style
         }
         
         # Try to add metadata and classroom_id columns if migrations have been run
@@ -2568,6 +2625,33 @@ Keep it concise - focus on key teaching points and conversation structure."""
                 raise
         
         if result.data:
+            # Link documents to activity if provided
+            if document_ids:
+                try:
+                    activity_docs = []
+                    for doc_id in document_ids:
+                        activity_docs.append({
+                            'activity_id': activity_id,
+                            'document_id': doc_id,
+                            'teacher_id': user['id'],
+                            'is_active': True,
+                            'version': 1
+                        })
+                    
+                    if activity_docs:
+                        # Insert activity_documents links
+                        # This creates the many-to-many relationship between activities and documents
+                        # Documents are scoped to specific activities, not the whole classroom
+                        supabase.table('activity_documents').insert(activity_docs).execute()
+                        
+                        # Note: We don't update document_chunks with activity_id because:
+                        # 1. Chunks belong to documents, not directly to activities
+                        # 2. The same document can be used in multiple activities
+                        # 3. We filter chunks by document_id from activity_documents when retrieving
+                except Exception as doc_link_error:
+                    # Log but don't fail activity creation
+                    print(f"Warning: Failed to link documents to activity: {doc_link_error}")
+            
             # Automatically assign activity to all students in the classroom
             assigned_count = 0
             assignment_error = None
