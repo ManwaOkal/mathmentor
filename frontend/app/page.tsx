@@ -89,7 +89,7 @@ function HomeContent() {
 
   // Show landing page only for non-logged-in users
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 relative overflow-x-hidden overflow-y-auto w-full max-w-full">
       {/* Background Pattern Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Aggressive gradient overlays with depth */}
@@ -330,13 +330,13 @@ function HomeContent() {
             </p>
           </div>
           
-          <div className="relative overflow-hidden py-10">
+          <div className="relative overflow-hidden py-10 w-full">
             {/* Enhanced gradient fade edges */}
             <div className="absolute left-0 top-0 bottom-0 w-32 sm:w-48 bg-gradient-to-r from-slate-50 via-slate-50/90 to-transparent z-20 pointer-events-none"></div>
             <div className="absolute right-0 top-0 bottom-0 w-32 sm:w-48 bg-gradient-to-l from-slate-50 via-slate-50/90 to-transparent z-20 pointer-events-none"></div>
             
             {/* Marquee container with pause on hover */}
-            <div className="flex animate-marquee hover:[animation-play-state:paused] group" style={{ width: 'fit-content' }}>
+            <div className="flex animate-marquee hover:[animation-play-state:paused] group overflow-x-hidden" style={{ width: 'fit-content' }}>
               {[
                 { src: '/logos/chavakali.jpeg', alt: 'Chavakali High School' },
                 { src: '/logos/chuluni.jpeg', alt: 'Chuluni' },
