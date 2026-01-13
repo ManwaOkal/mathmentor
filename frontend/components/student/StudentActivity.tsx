@@ -525,7 +525,7 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50/30 to-white flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50/30 to-white flex flex-col overflow-x-hidden">
       {/* Navigation Bar - matching student landing page */}
       <Navbar
         leftContent={
@@ -607,7 +607,7 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
 
       {/* Chat Container */}
       <main className="flex-1 overflow-hidden bg-gradient-to-b from-white to-slate-50/50">
-        <div className="max-w-6xl mx-auto h-full flex flex-col px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto h-full flex flex-col px-3 sm:px-4 md:px-6 lg:px-8 w-full">
           {/* Messages Container */}
           <div className="flex-1 overflow-y-auto py-6 sm:py-8 md:py-10 space-y-4 sm:space-y-5 pb-24 sm:pb-28 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
             {messages.map((message, index) => {
@@ -628,10 +628,18 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
                     </div>
                   )}
                   
-                  <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} ${showAvatar ? '' : isUser ? 'mr-12' : 'ml-12'} max-w-[95%] sm:max-w-[90%] md:max-w-[85%]`}>
+                  <div
+                    className={`flex flex-col ${
+                      isUser ? 'items-end' : 'items-start'
+                    } ${
+                      showAvatar ? '' : isUser ? 'sm:mr-12' : 'sm:ml-12'
+                    } max-w-full sm:max-w-[90%] md:max-w-[85%]`}
+                  >
                     {isUser ? (
                       <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl rounded-tr-sm px-4 sm:px-5 py-3 sm:py-3.5 shadow-lg shadow-blue-500/20">
-                        <p className="text-[15px] sm:text-base leading-relaxed whitespace-pre-wrap font-normal text-white">{message.content}</p>
+                        <p className="text-[15px] sm:text-base leading-relaxed whitespace-pre-wrap font-normal text-white break-words">
+                          {message.content}
+                        </p>
                       </div>
                     ) : (
                       <div className="w-full">
@@ -641,7 +649,7 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
                           </div>
                         )}
                         <div className="bg-white rounded-2xl rounded-tl-sm px-4 sm:px-5 py-4 sm:py-5 shadow-md border border-slate-100">
-                          <div className="prose prose-sm max-w-none prose-headings:mt-0 prose-headings:mb-3 prose-headings:text-slate-900 prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-2 prose-p:leading-relaxed prose-p:text-slate-700 prose-p:text-[15px] sm:prose-p:text-base prose-ul:my-3 prose-li:my-1.5 prose-li:text-slate-700 prose-li:leading-relaxed prose-strong:text-slate-900 prose-strong:font-semibold prose-code:text-slate-900 prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:rounded-lg prose-pre:my-3">
+                          <div className="prose prose-sm max-w-none break-words prose-headings:mt-0 prose-headings:mb-3 prose-headings:text-slate-900 prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-2 prose-p:leading-relaxed prose-p:text-slate-700 prose-p:text-[15px] sm:prose-p:text-base prose-ul:my-3 prose-li:my-1.5 prose-li:text-slate-700 prose-li:leading-relaxed prose-strong:text-slate-900 prose-strong:font-semibold prose-code:text-slate-900 prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:rounded-lg prose-pre:my-3">
                             <MarkdownRenderer content={message.content} />
                           </div>
                         </div>
