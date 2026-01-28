@@ -11,8 +11,6 @@ import {
   ArrowRight,
   Mail,
   Send,
-  GraduationCap,
-  Users,
   ArrowRightCircle,
 } from 'lucide-react'
 import { useAuth } from '../lib/auth/useAuth'
@@ -172,23 +170,23 @@ function HomeContent() {
             {/* Left: Content */}
             <div className="lg:pr-12">
               <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-8 leading-[1.05] tracking-[-0.02em]">
-                <span className="bg-gradient-to-r from-slate-700 via-slate-500 to-slate-600 bg-clip-text text-transparent">Train your own AI</span>{' '}
-                <span className="bg-gradient-to-r from-slate-600 via-slate-400 to-slate-500 bg-clip-text text-transparent">teaching assistants</span>
+                <span className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900 bg-clip-text text-transparent">Train your own AI</span>{' '}
+                <span className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900 bg-clip-text text-transparent">teaching assistants</span>
               </h1>
               
               {/* Outcome-focused bullets - no boxes */}
               <div className="space-y-4 mb-8">
                 <div className="flex items-start gap-4">
-                  <CheckCircle className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-lg bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600 bg-clip-text text-transparent leading-relaxed font-medium">Students get instant, personalized help when they need it</p>
+                  <CheckCircle className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-lg bg-gradient-to-r from-green-600 via-slate-700 to-slate-800 bg-clip-text text-transparent leading-relaxed font-medium">Students get instant, personalized help when they need it</p>
                 </div>
                 <div className="flex items-start gap-4">
-                  <CheckCircle className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-lg bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600 bg-clip-text text-transparent leading-relaxed font-medium">Teachers customize AI to match their teaching style</p>
+                  <CheckCircle className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-lg bg-gradient-to-r from-green-600 via-slate-700 to-slate-800 bg-clip-text text-transparent leading-relaxed font-medium">Teachers customize AI to match their teaching style</p>
                 </div>
                 <div className="flex items-start gap-4">
-                  <CheckCircle className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-lg bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600 bg-clip-text text-transparent leading-relaxed font-medium">See student progress and learning gaps in real-time</p>
+                  <CheckCircle className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-lg bg-gradient-to-r from-green-600 via-slate-700 to-slate-800 bg-clip-text text-transparent leading-relaxed font-medium">See student progress and learning gaps in real-time</p>
                 </div>
               </div>
               
@@ -410,42 +408,6 @@ function HomeContent() {
             </div>
           </div>
 
-          {/* Quick Navigation */}
-          <div className="mt-16 sm:mt-20 pt-12 sm:pt-16 border-t border-slate-200/60">
-            <div className="max-w-4xl mx-auto">
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
-                {/* For Students */}
-                <Link
-                  href="/students"
-                  className="group w-full sm:w-auto flex items-center gap-4 px-6 sm:px-8 py-4 bg-white rounded-xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
-                >
-                  <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-blue-50 transition-colors">
-                    <GraduationCap className="w-5 h-5 text-slate-600 group-hover:text-blue-600 transition-colors" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold text-[#1f1f1f] group-hover:text-blue-600 transition-colors">For Students</div>
-                    <div className="text-xs text-[#737373]">Learn with AI tutoring</div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-                </Link>
-
-                {/* For Teachers */}
-                <Link
-                  href="/teachers"
-                  className="group w-full sm:w-auto flex items-center gap-4 px-6 sm:px-8 py-4 bg-white rounded-xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
-                >
-                  <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-green-50 transition-colors">
-                    <Users className="w-5 h-5 text-slate-600 group-hover:text-green-600 transition-colors" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold text-[#1f1f1f] group-hover:text-green-600 transition-colors">For Teachers</div>
-                    <div className="text-xs text-[#737373]">Create & manage activities</div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
-                </Link>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 

@@ -153,8 +153,8 @@ export function ClassroomSidebar({
                   
                   {/* Collapsible Sections */}
                   {isExpanded && isActive && (
-                    <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-slate-50/50">
-                      <div className="pt-2 space-y-2">
+                    <div className="px-2 sm:px-4 pb-2 sm:pb-4 bg-slate-50/50">
+                      <div className="pt-2 space-y-1.5 sm:space-y-2">
                         <button
                           onClick={() => {
                             onSelectSection('activities')
@@ -163,14 +163,14 @@ export function ClassroomSidebar({
                               onClose()
                             }
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 text-xs sm:text-sm font-medium flex items-center space-x-2 ${
+                          className={`w-full text-left px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all duration-200 text-xs sm:text-sm font-medium flex items-center space-x-2 ${
                             activeSection === 'activities'
                               ? 'bg-slate-900 text-white shadow-sm'
                               : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                           }`}
                         >
-                          <Activity className="w-4 h-4" />
-                          <span>Activities</span>
+                          <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                          <span className="truncate">Activities</span>
                         </button>
                         <button
                           onClick={() => {
@@ -180,14 +180,14 @@ export function ClassroomSidebar({
                               onClose()
                             }
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 text-xs sm:text-sm font-medium flex items-center space-x-2 ${
+                          className={`w-full text-left px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all duration-200 text-xs sm:text-sm font-medium flex items-center space-x-2 ${
                             activeSection === 'finetuning'
                               ? 'bg-slate-900 text-white shadow-sm'
                               : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                           }`}
                         >
-                          <Settings className="w-4 h-4" />
-                          <span>Fine-Tuning</span>
+                          <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                          <span className="truncate">Fine-Tuning</span>
                         </button>
                         <button
                           onClick={() => {
@@ -197,14 +197,14 @@ export function ClassroomSidebar({
                               onClose()
                             }
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 text-xs sm:text-sm font-medium flex items-center space-x-2 ${
+                          className={`w-full text-left px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all duration-200 text-xs sm:text-sm font-medium flex items-center space-x-2 ${
                             activeSection === 'analytics'
                               ? 'bg-slate-900 text-white shadow-sm'
                               : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                           }`}
                         >
-                          <BarChart3 className="w-4 h-4" />
-                          <span>Analytics</span>
+                          <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                          <span className="truncate">Analytics</span>
                         </button>
                       </div>
                     </div>

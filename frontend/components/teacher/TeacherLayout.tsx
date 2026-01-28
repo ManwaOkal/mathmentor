@@ -115,10 +115,6 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       }
     } catch (error) {
       // Error occurred
-      // Error occurred,
-        stack: error instanceof Error ? error.stack : undefined
-      })
-      
       setClassrooms([])
       // Show user-friendly error message
       if (error instanceof Error) {
@@ -243,11 +239,22 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
             {/* Tabs Navigation - Only shown when classroom is selected */}
             {activeClassroom && (
               <div className="border-b border-slate-200 bg-white sticky top-0 z-40">
-                <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="flex items-center gap-1 sm:gap-2 relative">
+                <div className="max-w-full mx-auto px-3 sm:px-6 lg:px-8">
+                  {/* Join Code Button - Top on mobile, hidden on desktop (shown in tabs) */}
+                  <div className="sm:hidden flex justify-center py-2.5 border-b border-slate-100">
+                    <button
+                      onClick={copyJoinCode}
+                      className="font-mono bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg text-[11px] flex items-center gap-1.5 transition-colors text-slate-700 w-full max-w-xs justify-center"
+                    >
+                      <span className="text-[11px] font-medium">Join Code:</span>
+                      <span className="text-[11px] font-semibold">{activeClassroom.join_code}</span>
+                      <Share2 className="w-3 h-3 text-slate-500 flex-shrink-0" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-0.5 sm:gap-2 relative overflow-x-auto scrollbar-hide">
                     <button
                       onClick={() => handleSectionSelect('activities')}
-                      className={`px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-medium transition-all duration-200 border-b-2 ${
+                      className={`px-3 sm:px-6 py-2.5 sm:py-4 text-xs sm:text-base font-medium transition-all duration-200 border-b-2 whitespace-nowrap flex-shrink-0 ${
                         activeSection === 'activities'
                           ? 'border-slate-900 text-slate-900'
                           : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
@@ -257,7 +264,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
                     </button>
                     <button
                       onClick={() => handleSectionSelect('finetuning')}
-                      className={`px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-medium transition-all duration-200 border-b-2 ${
+                      className={`px-3 sm:px-6 py-2.5 sm:py-4 text-xs sm:text-base font-medium transition-all duration-200 border-b-2 whitespace-nowrap flex-shrink-0 ${
                         activeSection === 'finetuning'
                           ? 'border-slate-900 text-slate-900'
                           : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
@@ -267,7 +274,7 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
                     </button>
                     <button
                       onClick={() => handleSectionSelect('analytics')}
-                      className={`px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base font-medium transition-all duration-200 border-b-2 ${
+                      className={`px-3 sm:px-6 py-2.5 sm:py-4 text-xs sm:text-base font-medium transition-all duration-200 border-b-2 whitespace-nowrap flex-shrink-0 ${
                         activeSection === 'analytics'
                           ? 'border-slate-900 text-slate-900'
                           : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
@@ -286,17 +293,6 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
                         <Share2 className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
                       </button>
                     </div>
-                  </div>
-                  {/* Join Code Button - Below tabs on mobile */}
-                  <div className="sm:hidden flex justify-center py-3 border-t border-slate-100">
-                    <button
-                      onClick={copyJoinCode}
-                      className="font-mono bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 px-3 py-2 rounded-lg text-xs flex items-center gap-2 transition-colors text-slate-700"
-                    >
-                      <span className="text-xs font-medium">Join Code:</span>
-                      <span className="text-xs font-semibold">{activeClassroom.join_code}</span>
-                      <Share2 className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                    </button>
                   </div>
                 </div>
               </div>
