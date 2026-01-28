@@ -32,10 +32,11 @@ type LearningPhase = 'introduction' | 'teach' | 'practice' | 'evaluate' | 'compl
 
 interface StudentActivityProps {
   activityId: string
+  view?: 'default' | 'chat'
   onActivityCompleted?: () => void
 }
 
-export default function StudentActivity({ activityId, onActivityCompleted }: StudentActivityProps) {
+export default function StudentActivity({ activityId, view = 'default', onActivityCompleted }: StudentActivityProps) {
   const router = useRouter()
   const { session } = useAuth()
   const [activity, setActivity] = useState<StudentActivityType | null>(null)
@@ -45,6 +46,7 @@ export default function StudentActivity({ activityId, onActivityCompleted }: Stu
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [completed, setCompleted] = useState(false)
+  const [showChatHistory, setShowChatHistory] = useState(view === 'chat')
   const [currentPhase, setCurrentPhase] = useState<LearningPhase>('introduction')
   const [timeSpent, setTimeSpent] = useState(0)
   const [understandingScore, setUnderstandingScore] = useState<number | null>(null)
@@ -143,6 +145,10 @@ export default function StudentActivity({ activityId, onActivityCompleted }: Stu
           }
           if (data.student_activity.feedback) {
             setAssessmentFeedback(data.student_activity.feedback)
+          }
+          // If view is 'chat', show chat history instead of completion screen
+          if (view === 'chat') {
+            setShowChatHistory(true)
           }
           return // Don't proceed with normal flow for completed activities
         }
@@ -525,7 +531,7 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50/30 to-white flex flex-col overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50/30 to-white flex flex-col">
       {/* Navigation Bar - matching student landing page */}
       <Navbar
         leftContent={
@@ -543,15 +549,28 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
             <h1 className="text-base sm:text-lg font-bold text-slate-900 truncate tracking-tight">
               {activityTitle || 'Math Activity'}
             </h1>
-            {!completed && (
-              <div className="flex items-center justify-center gap-2 mt-0.5">
-                <span className="text-xs text-slate-500 capitalize font-medium px-2 py-0.5 bg-slate-100 rounded-md">
-                  {currentPhase.replace('_', ' ')}
-                </span>
-                <div className="flex items-center text-xs text-slate-500">
-                  <Clock className="w-3 h-3 mr-1" />
-                  {timeSpent} min
-                </div>
+            {completed && (
+              <div className="flex items-center justify-center gap-2 mt-1">
+                <button
+                  onClick={() => setShowChatHistory(false)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    !showChatHistory
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Results
+                </button>
+                <button
+                  onClick={() => setShowChatHistory(true)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    showChatHistory
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Chat History
+                </button>
               </div>
             )}
           </div>
@@ -607,9 +626,9 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
 
       {/* Chat Container */}
       <main className="flex-1 overflow-hidden bg-gradient-to-b from-white to-slate-50/50">
-        <div className="max-w-6xl mx-auto h-full flex flex-col px-3 sm:px-4 md:px-6 lg:px-8 w-full">
+        <div className="max-w-6xl mx-auto h-full flex flex-col px-3 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden">
           {/* Messages Container */}
-          <div className="flex-1 overflow-y-auto py-6 sm:py-8 md:py-10 space-y-4 sm:space-y-5 pb-24 sm:pb-28 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden py-6 sm:py-8 md:py-10 space-y-4 sm:space-y-5 pb-24 sm:pb-28 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
             {messages.map((message, index) => {
               const isUser = message.role === 'user'
               const showAvatar = index === 0 || messages[index - 1]?.role !== message.role
@@ -617,39 +636,31 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
               return (
                 <div
                   key={message.id}
-                  className={`flex ${isUser ? 'justify-end' : 'justify-start'} items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300`}
+                  className={`flex ${isUser ? 'justify-end' : 'justify-start'} items-start gap-2 sm:gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300`}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   {!isUser && showAvatar && (
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg ring-2 ring-blue-100">
-                        <Brain className="w-5 h-5 text-white" />
+                    <div className="flex-shrink-0 mt-1 hidden sm:block">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg ring-2 ring-blue-100">
+                        <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                       </div>
                     </div>
                   )}
                   
-                  <div
-                    className={`flex flex-col ${
-                      isUser ? 'items-end' : 'items-start'
-                    } ${
-                      showAvatar ? '' : isUser ? 'sm:mr-12' : 'sm:ml-12'
-                    } max-w-full sm:max-w-[90%] md:max-w-[85%]`}
-                  >
+                  <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[95%] sm:max-w-[90%] md:max-w-[85%] min-w-0 flex-1`}>
                     {isUser ? (
-                      <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl rounded-tr-sm px-4 sm:px-5 py-3 sm:py-3.5 shadow-lg shadow-blue-500/20">
-                        <p className="text-[15px] sm:text-base leading-relaxed whitespace-pre-wrap font-normal text-white break-words">
-                          {message.content}
-                        </p>
+                      <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl rounded-tr-sm px-4 sm:px-5 py-3 sm:py-3.5 shadow-lg shadow-blue-500/20 break-words overflow-wrap-anywhere w-full">
+                        <p className="text-[15px] sm:text-base leading-relaxed whitespace-pre-wrap font-normal text-white break-words">{message.content}</p>
                       </div>
                     ) : (
-                      <div className="w-full">
+                      <div className="w-full min-w-0">
                         {showAvatar && (
                           <div className="mb-1.5 ml-1">
                             <span className="text-xs font-semibold text-slate-600 tracking-wide">MathMentor</span>
                           </div>
                         )}
-                        <div className="bg-white rounded-2xl rounded-tl-sm px-4 sm:px-5 py-4 sm:py-5 shadow-md border border-slate-100">
-                          <div className="prose prose-sm max-w-none break-words prose-headings:mt-0 prose-headings:mb-3 prose-headings:text-slate-900 prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-2 prose-p:leading-relaxed prose-p:text-slate-700 prose-p:text-[15px] sm:prose-p:text-base prose-ul:my-3 prose-li:my-1.5 prose-li:text-slate-700 prose-li:leading-relaxed prose-strong:text-slate-900 prose-strong:font-semibold prose-code:text-slate-900 prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:rounded-lg prose-pre:my-3">
+                        <div className="bg-white rounded-2xl rounded-tl-sm px-4 sm:px-5 py-4 sm:py-5 shadow-md border border-slate-200 min-w-0 overflow-hidden">
+                          <div className="prose prose-sm max-w-none prose-headings:mt-0 prose-headings:mb-3 prose-headings:text-slate-900 prose-headings:font-semibold prose-headings:tracking-tight prose-p:my-2 prose-p:leading-relaxed prose-p:text-slate-700 prose-p:text-[15px] sm:prose-p:text-base prose-ul:my-3 prose-li:my-1.5 prose-li:text-slate-700 prose-li:leading-relaxed prose-strong:text-slate-900 prose-strong:font-semibold prose-code:text-slate-900 prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:rounded-lg prose-pre:my-3 min-w-0 break-words">
                             <MarkdownRenderer content={message.content} />
                           </div>
                         </div>
@@ -658,9 +669,9 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
                   </div>
                   
                   {isUser && showAvatar && (
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center shadow-lg ring-2 ring-slate-100">
-                        <span className="text-white text-sm font-semibold">S</span>
+                    <div className="flex-shrink-0 mt-1 hidden sm:block">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center shadow-lg ring-2 ring-slate-100">
+                        <span className="text-white text-xs sm:text-sm font-semibold">S</span>
                       </div>
                     </div>
                   )}
@@ -669,14 +680,14 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
             })}
 
             {sending && (
-              <div className="flex justify-start items-start gap-3 animate-in fade-in duration-200">
-                <div className="flex-shrink-0 mt-1">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg ring-2 ring-blue-100">
-                    <Brain className="w-5 h-5 text-white" />
+              <div className="flex justify-start items-start gap-2 sm:gap-3 animate-in fade-in duration-200">
+                <div className="flex-shrink-0 mt-1 hidden sm:block">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg ring-2 ring-blue-100">
+                    <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                 </div>
-                <div className="bg-white rounded-2xl rounded-tl-sm px-4 sm:px-5 py-3 sm:py-3.5 shadow-md border border-slate-100">
-                  <div className="flex items-center space-x-2.5">
+                <div className="bg-white rounded-2xl rounded-tl-sm px-4 sm:px-5 py-3 sm:py-3.5 shadow-md border border-slate-200 max-w-[95%] sm:max-w-[90%] md:max-w-[85%] min-w-0">
+                  <div className="flex items-center space-x-2.5 relative z-10">
                     <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
                     <span className="text-sm text-slate-600 font-medium">Thinking...</span>
                   </div>
@@ -734,8 +745,8 @@ You've shown excellent mathematical thinking throughout this activity. Keep up t
         </div>
       )}
 
-      {/* Completion Screen */}
-      {completed && understandingScore !== null && (
+      {/* Completion Screen - Only show if not viewing chat history */}
+      {completed && understandingScore !== null && !showChatHistory && (
         <div className="fixed inset-0 bg-white/95 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto animate-in fade-in duration-200">
           <div className="bg-white border border-slate-200 rounded-xl max-w-2xl w-full p-8 shadow-xl my-8 animate-in zoom-in-95 duration-300">
             <div className="mb-8">

@@ -166,7 +166,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
     }, [content])
     
   return (
-      <div className={`prose prose-sm max-w-none dark:prose-invert ${className}`}>
+      <div className={`prose prose-sm max-w-none dark:prose-invert ${className} break-words overflow-wrap-anywhere`}>
         <style dangerouslySetInnerHTML={{ __html: `
           /* Enhanced typography */
           .prose {
@@ -176,6 +176,11 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
             text-rendering: optimizeLegibility;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            max-width: 100%;
+            overflow-x: hidden;
           }
           
           /* Consistent spacing between thoughts/steps */
@@ -372,6 +377,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
             background: linear-gradient(135deg, #1a202c 0%, #1e293b 100%);
             color: #e2e8f0;
             overflow-x: auto;
+            overflow-y: hidden;
+            max-width: 100%;
             padding: 1.25rem 1.5rem;
             border-radius: 0.75rem;
             margin: 1.25rem 0;
@@ -382,6 +389,17 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
               inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
             font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
             transition: all 0.3s ease;
+          }
+          
+          /* Ensure all prose elements respect container width */
+          .prose * {
+            max-width: 100%;
+          }
+          
+          .prose p, .prose li, .prose td, .prose th {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
           }
           
           .prose pre:hover {
@@ -415,12 +433,25 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
             border-radius: 0.75rem;
             overflow-x: auto;
             overflow-y: hidden;
+            max-width: 100%;
             box-shadow: 
               0 4px 6px -1px rgba(0, 0, 0, 0.1),
               0 2px 4px -1px rgba(0, 0, 0, 0.06),
               inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+          }
+          
+          /* Prevent katex from causing horizontal overflow */
+          .prose .katex {
+            max-width: 100%;
+            overflow-x: auto;
+            display: inline-block;
+          }
+          
+          .prose .katex > .katex-html {
+            max-width: 100%;
+            overflow-x: auto;
           }
           
           .prose .katex-display::before {
@@ -620,8 +651,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
             // Add custom styling for tables
             table({ children }: any) {
             return (
-                <div className="overflow-x-auto my-4">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <div className="overflow-x-auto my-4 max-w-full">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 max-w-full">
                 {children}
                   </table>
                 </div>

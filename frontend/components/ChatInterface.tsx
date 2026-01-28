@@ -66,17 +66,17 @@ const MessageItem = React.memo(({ message, index, totalMessages }: { message: Me
   return (
     <div
       ref={messageRef}
-      className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} min-w-0`}
       style={{ contain: 'layout style paint' }} // CSS containment for performance
     >
-      <div className={`max-w-[85%] sm:max-w-[75%] rounded-lg p-3 sm:p-4 ${bgClass}`}>
+      <div className={`max-w-[85%] sm:max-w-[75%] rounded-lg p-3 sm:p-4 ${bgClass} min-w-0 break-words overflow-wrap-anywhere`}>
         {isVisible ? (
           <MarkdownRenderer 
             content={message.content}
           />
         ) : (
-          <div className="prose prose-sm max-w-none">
-            <p className="text-sm opacity-70">{message.content.substring(0, 100)}...</p>
+          <div className="prose prose-sm max-w-none break-words">
+            <p className="text-sm opacity-70 break-words">{message.content.substring(0, 100)}...</p>
           </div>
         )}
       </div>
@@ -360,7 +360,7 @@ export default function ChatInterface({ onConversationUpdate }: ChatInterfacePro
       {/* Messages Container with CSS containment */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6"
+        className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 sm:space-y-6"
         style={{ contain: 'layout style paint', willChange: 'scroll-position' }}
       >
         {messages.length === 0 && emptyState}

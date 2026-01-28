@@ -23,7 +23,8 @@ import {
   Clock,
   Award,
   CheckCircle,
-  Home
+  Home,
+  MessageSquare
 } from 'lucide-react'
 
 function StudentPageContent() {
@@ -38,7 +39,6 @@ function StudentPageContent() {
   const [activities, setActivities] = useState<any[]>([])
   const [loadingActivities, setLoadingActivities] = useState(false)
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set())
-  const [sidebarOpen, setSidebarOpen] = useState(true)
   const isLoadingRef = useRef(false)
   
   // Cache for activities with timestamps
@@ -262,6 +262,10 @@ function StudentPageContent() {
     router.push(`/student?activityId=${activityId}`)
   }
 
+  const handleViewChatHistory = (activityId: string) => {
+    router.push(`/student?activityId=${activityId}&view=chat`)
+  }
+
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -300,9 +304,11 @@ function StudentPageContent() {
 
   // If activity ID is provided, show activity
   if (activityId) {
+    const view = searchParams?.get('view') || 'default'
     return (
       <StudentActivity 
-        activityId={activityId} 
+        activityId={activityId}
+        view={view === 'chat' ? 'chat' : 'default'}
         onActivityCompleted={() => {
           // Refresh activities list when an activity is completed
           if (selectedClassroomId) {
@@ -373,26 +379,36 @@ function StudentPageContent() {
 
         {/* Left Sidebar - Only shown when classroom is selected - Wider for better readability */}
         {selectedClassroomId && (
-          <aside className={`fixed lg:sticky top-[9rem] lg:top-0 left-0 h-[calc(100vh-9rem)] lg:h-screen w-full lg:w-[420px] bg-white flex flex-col z-40 lg:z-auto transition-all duration-500 ease-in-out ${
-            sidebarOpen 
-              ? 'translate-x-0 opacity-100 shadow-2xl lg:shadow-lg' 
-              : '-translate-x-full opacity-0 lg:translate-x-0 lg:opacity-100 pointer-events-none lg:pointer-events-auto'
-          }`}>
+          <aside className="fixed lg:sticky top-[6rem] lg:top-0 left-0 h-[calc(100vh-6rem)] lg:h-screen w-full lg:w-[420px] bg-gradient-to-br from-slate-50 via-white to-slate-50/80 flex flex-col z-40 lg:z-auto border-r border-slate-200/60 backdrop-blur-sm shadow-2xl lg:shadow-xl">
+            {/* Sidebar Header */}
+            <div className="px-4 sm:px-5 pt-5 sm:pt-6 pb-4 border-b border-slate-200/60 bg-gradient-to-br from-slate-50 via-white to-slate-50/80">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                  Activities
+                </h2>
+                <div className="px-2.5 py-1 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/60 rounded-lg">
+                  <span className="text-xs sm:text-sm font-bold text-blue-700">{activities.length}</span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-600 font-medium">{activities.length === 1 ? 'activity assigned' : 'activities assigned'}</p>
+            </div>
 
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 scrollbar-thin scrollbar-thumb-slate-300/50 scrollbar-track-transparent">
               {loadingActivities ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin"></div>
                 </div>
               ) : activities.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-xl flex items-center justify-center">
-                    <BookOpen className="w-8 h-8 text-slate-400" />
+                <div className="text-center py-12 text-slate-500">
+                  <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center shadow-inner border border-slate-200/50">
+                    <BookOpen className="w-10 h-10 text-slate-400" />
                   </div>
-                  <p className="text-sm font-medium">No activities assigned</p>
+                  <p className="text-sm font-semibold text-slate-700">No activities assigned</p>
+                  <p className="text-xs text-slate-500 mt-1">Your teacher will add activities here</p>
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-2.5">
                   {activities.map((activity: any, index: number) => {
                     const activityData = activity.learning_activities || {}
                     const status = activity.status || 'assigned'
@@ -403,102 +419,134 @@ function StudentPageContent() {
                     return (
                       <div 
                         key={activity.student_activity_id} 
-                        className="group relative bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                        className="group relative bg-gradient-to-br from-white via-white to-slate-50/50 rounded-xl shadow-lg hover:shadow-xl border border-slate-200/60 transition-all duration-300 hover:scale-[1.02] hover:border-slate-300/80 overflow-hidden"
                       >
-                        {/* Subtle left accent bar for state */}
-                        <div className={`absolute left-0 top-0 bottom-0 w-0.5 rounded-full transition-colors duration-200 ${
-                          status === 'completed' ? 'bg-green-400' :
-                          status === 'in_progress' ? 'bg-blue-400' :
-                          'bg-slate-300'
+                        {/* Enhanced left accent bar for state */}
+                        <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-r-full transition-all duration-300 ${
+                          status === 'completed' ? 'bg-gradient-to-b from-green-400 to-green-500 shadow-lg shadow-green-400/50' :
+                          status === 'in_progress' ? 'bg-gradient-to-b from-blue-400 to-blue-500 shadow-lg shadow-blue-400/50' :
+                          'bg-gradient-to-b from-slate-300 to-slate-400'
                         }`} />
+                        
+                        {/* Subtle gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-slate-50/30 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                         
                         {isCompleted ? (
                           <button
                             onClick={() => toggleActivityExpansion(activity.student_activity_id)}
-                            className="w-full flex items-center justify-between pl-5 sm:pl-6 pr-3 sm:pr-4 py-3 sm:py-4 hover:bg-slate-50/50 transition-colors duration-200 text-left rounded-lg"
+                            className="w-full flex items-center justify-between pl-4 sm:pl-6 pr-3 sm:pr-4 py-3 sm:py-4 hover:bg-gradient-to-r hover:from-slate-50/80 hover:to-transparent transition-all duration-300 text-left rounded-xl relative z-10"
                           >
-                            <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-                              {/* Icon without container */}
-                              <div className="flex-shrink-0">
-                                {getStatusIcon(status)}
+                            <div className="flex items-center space-x-2.5 sm:space-x-3.5 flex-1 min-w-0">
+                              {/* Enhanced icon container */}
+                              <div className="flex-shrink-0 relative">
+                                <div className="absolute inset-0 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg blur-sm opacity-50 hidden sm:block"></div>
+                                <div className="relative bg-gradient-to-br from-white to-slate-50 p-1.5 sm:p-2 rounded-lg border border-slate-200/60 shadow-sm">
+                                  {getStatusIcon(status)}
+                                </div>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-xs sm:text-sm text-slate-900 truncate">
+                                <div className="font-bold text-xs sm:text-sm md:text-base text-slate-900 truncate leading-tight">
                                   {activityData.title || 'Untitled Activity'}
                                 </div>
-                                <div className="text-xs text-slate-500 mt-0.5 capitalize">
+                                <div className="text-[10px] sm:text-xs text-slate-600 mt-0.5 sm:mt-1 font-medium capitalize flex items-center gap-1 sm:gap-1.5">
+                                  <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${
+                                    status === 'completed' ? 'bg-green-500' :
+                                    status === 'in_progress' ? 'bg-blue-500' :
+                                    'bg-slate-400'
+                                  }`}></span>
                                   {status.replace('_', ' ')}
                                 </div>
                               </div>
                             </div>
-                            <div className="flex-shrink-0 ml-2 sm:ml-3">
+                            <div className="flex-shrink-0 ml-2 sm:ml-3 bg-slate-100/60 rounded-lg p-1 sm:p-1.5 group-hover:bg-slate-200/60 transition-colors duration-300">
                               {isExpanded ? (
-                                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 transition-transform duration-200" />
+                                <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-slate-600 transition-transform duration-300" />
                               ) : (
-                                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 transition-transform duration-200" />
+                                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-slate-600 transition-transform duration-300" />
                               )}
                             </div>
                           </button>
                         ) : (
-                          <div className="w-full flex items-center justify-between pl-5 sm:pl-6 pr-3 sm:pr-4 py-3 sm:py-4 rounded-lg">
-                            <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-                              {/* Icon without container */}
-                              <div className="flex-shrink-0">
-                                {getStatusIcon(status)}
+                          <button
+                            onClick={() => handleStartActivity(activity.activity_id)}
+                            className="w-full flex items-center justify-between pl-4 sm:pl-5 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-lg relative z-10 hover:bg-gradient-to-r hover:from-slate-50/80 hover:to-transparent transition-all duration-300 text-left"
+                          >
+                            <div className="flex items-center space-x-2.5 sm:space-x-3 flex-1 min-w-0">
+                              {/* Compact icon container */}
+                              <div className="flex-shrink-0 relative">
+                                <div className="relative bg-gradient-to-br from-white to-slate-50 p-1.5 sm:p-2 rounded-md border border-slate-200/60 shadow-sm">
+                                  {getStatusIcon(status)}
+                                </div>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-xs sm:text-sm text-slate-900 truncate">
+                                <div className="font-semibold text-xs sm:text-sm text-slate-900 truncate leading-tight">
                                   {activityData.title || 'Untitled Activity'}
                                 </div>
-                                <div className="text-xs text-slate-500 mt-0.5 capitalize">
+                                <div className="text-[10px] sm:text-xs text-slate-500 mt-0.5 capitalize flex items-center gap-1">
+                                  <span className={`w-1 h-1 rounded-full ${
+                                    status === 'completed' ? 'bg-green-500' :
+                                    status === 'in_progress' ? 'bg-blue-500' :
+                                    'bg-slate-400'
+                                  }`}></span>
                                   {status.replace('_', ' ')}
                                 </div>
                               </div>
                             </div>
-                          </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleStartActivity(activity.activity_id)
+                              }}
+                              className="hidden sm:flex flex-shrink-0 ml-2 sm:ml-3 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-slate-900 to-slate-800 text-white text-[10px] sm:text-xs font-semibold rounded-lg hover:from-slate-800 hover:to-slate-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                            >
+                              Start
+                            </button>
+                          </button>
                         )}
 
                         {isExpanded && (
-                          <div className="pl-5 sm:pl-6 pr-3 sm:pr-4 pb-3 sm:pb-4">
-                            <div className="pt-2 space-y-3">
-                              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
+                          <div className="pl-4 sm:pl-6 pr-3 sm:pr-4 pb-3 sm:pb-4 relative z-10">
+                            <div className="pt-2 sm:pt-3 border-t border-slate-200/60 space-y-3 sm:space-y-4">
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-[10px] sm:text-xs">
                                 {activity.total_questions !== null && (
-                                  <span className="text-slate-600 flex items-center gap-1.5">
-                                    <BookOpen className="w-3 h-3 text-slate-400" />
-                                    {activity.total_questions} questions
+                                  <span className="text-slate-700 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 bg-slate-100/60 rounded-md sm:rounded-lg font-medium border border-slate-200/60">
+                                    <BookOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" />
+                                    <span className="whitespace-nowrap">{activity.total_questions} questions</span>
                                   </span>
                                 )}
                                 {activity.score !== null && (
-                                  <span className="text-slate-600 flex items-center gap-1.5">
-                                    <Award className="w-3 h-3 text-slate-400" />
-                                    {activity.score}% score
+                                  <span className="text-slate-700 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-md sm:rounded-lg font-medium border border-amber-200/60">
+                                    <Award className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-600" />
+                                    <span className="whitespace-nowrap">{activity.score}% score</span>
                                   </span>
                                 )}
                               </div>
 
-                              {(status === 'assigned' || status === 'in_progress' || status === 'completed') && (
-                                <div>
-                                  {(status === 'assigned' || status === 'in_progress') && (
-                                    <button
-                                      onClick={() => handleStartActivity(activity.activity_id)}
-                                      className={`w-full py-2.5 sm:py-3 px-4 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
-                                        status === 'assigned'
-                                          ? 'bg-slate-900 text-white hover:bg-slate-800'
-                                          : 'bg-slate-700 text-white hover:bg-slate-600'
-                                      }`}
-                                    >
-                                      {status === 'assigned' ? 'Start Activity' : 'Continue'}
-                                    </button>
-                                  )}
-                                  
-                                  {status === 'completed' && (
-                                    <button
-                                      onClick={() => handleStartActivity(activity.activity_id)}
-                                      className="w-full py-2.5 sm:py-3 px-4 bg-slate-100 text-slate-700 rounded-md text-xs sm:text-sm font-medium text-center hover:bg-slate-200 transition-all duration-200"
-                                    >
-                                      View Results
-                                    </button>
-                                  )}
+                              {status === 'in_progress' && (
+                                <button
+                                  onClick={() => handleStartActivity(activity.activity_id)}
+                                  className="w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-bold transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:via-blue-500 hover:to-indigo-500 border border-blue-500/50"
+                                >
+                                  Continue
+                                </button>
+                              )}
+                              
+                              {status === 'completed' && (
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                    onClick={() => handleStartActivity(activity.activity_id)}
+                                    className="py-2.5 sm:py-3 px-3 sm:px-4 bg-gradient-to-r from-slate-100 via-white to-slate-100 text-slate-700 rounded-lg text-[10px] sm:text-xs font-bold text-center hover:from-slate-200 hover:via-white hover:to-slate-200 transition-all duration-300 shadow-md hover:shadow-lg border border-slate-200/80 transform hover:scale-[1.02] active:scale-[0.98]"
+                                  >
+                                    Results
+                                  </button>
+                                  <button
+                                    onClick={() => handleViewChatHistory(activity.activity_id)}
+                                    className="py-2.5 sm:py-3 px-3 sm:px-4 bg-gradient-to-r from-blue-50 via-white to-blue-50 text-blue-700 rounded-lg text-[10px] sm:text-xs font-bold text-center hover:from-blue-100 hover:via-white hover:to-blue-100 transition-all duration-300 shadow-md hover:shadow-lg border border-blue-200/80 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1"
+                                  >
+                                    <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                    <span className="hidden sm:inline">Chat</span>
+                                    <span className="sm:hidden">Chat</span>
+                                  </button>
                                 </div>
                               )}
                             </div>
@@ -519,30 +567,6 @@ function StudentPageContent() {
             {selectedClassroomId ? (
               /* Classroom Activities View */
               <div className="flex items-center justify-center min-h-[60vh] relative">
-                {/* Toggle button - positioned after navbar (below classroom name) */}
-                <button
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className={`lg:hidden fixed top-[4.5rem] left-4 inline-flex items-center justify-center w-14 h-14 bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.15),0_0_0_1px_rgba(0,0,0,0.05)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.2),0_0_0_1px_rgba(0,0,0,0.08)] group hover:scale-105 active:scale-95 backdrop-blur-sm border border-slate-200/50 ${
-                    sidebarOpen ? 'z-[50]' : 'z-30'
-                  }`}
-                  aria-label={sidebarOpen ? "Close activities sidebar" : "Open activities sidebar"}
-                >
-                  {sidebarOpen ? (
-                    // Close icon (X)
-                    <div className="relative w-6 h-6 flex flex-col justify-center gap-1.5">
-                      <span className="block h-0.5 w-full bg-current transition-all duration-300 rotate-45 translate-y-2 group-hover:bg-slate-900"></span>
-                      <span className="block h-0.5 w-full bg-current transition-all duration-300 opacity-0"></span>
-                      <span className="block h-0.5 w-full bg-current transition-all duration-300 -rotate-45 -translate-y-2 group-hover:bg-slate-900"></span>
-                    </div>
-                  ) : (
-                    // Open icon (hamburger)
-                    <div className="relative w-6 h-6 flex flex-col justify-center gap-1.5">
-                      <span className="block h-0.5 w-full bg-current transition-all duration-300 group-hover:translate-x-0.5 group-hover:w-5"></span>
-                      <span className="block h-0.5 w-full bg-current transition-all duration-300 group-hover:translate-x-0.5"></span>
-                      <span className="block h-0.5 w-full bg-current transition-all duration-300 group-hover:translate-x-0.5 group-hover:w-5"></span>
-                    </div>
-                  )}
-                </button>
                 
                 {/* Centered content when no activity selected - no card */}
                 <div className="w-full max-w-2xl mx-auto">
