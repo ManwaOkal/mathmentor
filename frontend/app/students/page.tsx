@@ -192,25 +192,28 @@ export default function StudentsPage() {
                   Enter a simple code from your teacher to access assigned activities instantly.
                 </p>
               </div>
-              <div className="relative">
-                <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
-                  filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
-                }}>
-                  <div className="bg-white rounded-lg overflow-hidden">
-                    <Image
-                      src="/student_join_classroom_page.png"
-                      alt="Student joining classroom"
-                      width={600}
-                      height={400}
-                      className="w-full h-auto"
-                      quality={85}
-                      loading="lazy"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
+              <div className="relative w-full flex items-center justify-center">
+                <div className="relative w-full" style={{ maxWidth: '510px' }}>
+                  {/* Softer laptop mockup */}
+                  <div className="relative">
+                    <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1" style={{ aspectRatio: '510/350' }}>
+                      <div className="bg-white rounded-lg overflow-y-auto h-full">
+                        <Image
+                          src="/student_join_classroom_page.png"
+                          alt="Student joining classroom"
+                          width={600}
+                          height={400}
+                          className="w-full"
+                          quality={85}
+                          loading="lazy"
+                          sizes="(max-width: 640px) 100vw, 510px"
+                        />
+                      </div>
+                    </div>
+                    <div className="relative h-3 bg-gray-800 rounded-b-xl shadow-lg">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
+                    </div>
                   </div>
-                </div>
-                <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
             </div>
@@ -230,25 +233,28 @@ export default function StudentsPage() {
                   See all classes you are enrolled in and click on a class to complete the activities assigned by your teacher.
                 </p>
               </div>
-              <div className="relative lg:order-1">
-                <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
-                  filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
-                }}>
-                  <div className="bg-white rounded-lg overflow-hidden">
-                    <Image
-                      src="/see_all clases you are enrolled in and click on a class to complete the activites .png"
-                      alt="View all enrolled classes and activities"
-                      width={600}
-                      height={400}
-                      className="w-full h-auto"
-                      quality={85}
-                      loading="lazy"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
+              <div className="relative w-full flex items-center justify-center lg:order-1">
+                <div className="relative w-full" style={{ maxWidth: '510px' }}>
+                  {/* Softer laptop mockup */}
+                  <div className="relative">
+                    <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1" style={{ aspectRatio: '510/350' }}>
+                      <div className="bg-white rounded-lg overflow-y-auto h-full">
+                        <Image
+                          src="/see_all clases you are enrolled in and click on a class to complete the activites .png"
+                          alt="View all enrolled classes and activities"
+                          width={600}
+                          height={400}
+                          className="w-full"
+                          quality={85}
+                          loading="lazy"
+                          sizes="(max-width: 640px) 100vw, 510px"
+                        />
+                      </div>
+                    </div>
+                    <div className="relative h-3 bg-gray-800 rounded-b-xl shadow-lg">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
+                    </div>
                   </div>
-                </div>
-                <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
             </div>
@@ -268,25 +274,28 @@ export default function StudentsPage() {
                   After selecting a class, view and complete all activities planned by your teacher. See your progress and track which activities you've finished.
                 </p>
               </div>
-              <div className="relative">
-                <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
-                  filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
-                }}>
-                  <div className="bg-white rounded-lg overflow-hidden">
-                    <Image
-                      src="/student_class_activity_view.png"
-                      alt="View assigned activities for a class"
-                      width={600}
-                      height={400}
-                      className="w-full h-auto"
-                      quality={85}
-                      loading="lazy"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
+              <div className="relative w-full flex items-center justify-center">
+                <div className="relative w-full" style={{ maxWidth: '510px' }}>
+                  {/* Softer laptop mockup */}
+                  <div className="relative">
+                    <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1" style={{ aspectRatio: '510/350' }}>
+                      <div className="bg-white rounded-lg overflow-y-auto h-full">
+                        <Image
+                          src="/student_class_activity_view.png"
+                          alt="View assigned activities for a class"
+                          width={600}
+                          height={400}
+                          className="w-full"
+                          quality={85}
+                          loading="lazy"
+                          sizes="(max-width: 640px) 100vw, 510px"
+                        />
+                      </div>
+                    </div>
+                    <div className="relative h-3 bg-gray-800 rounded-b-xl shadow-lg">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
+                    </div>
                   </div>
-                </div>
-                <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
             </div>
@@ -300,25 +309,28 @@ export default function StudentsPage() {
               }}>
                 <div className="p-3 text-xs font-semibold text-slate-800">Step 4</div>
               </div>
-              <div className="relative order-2 lg:order-1">
-                <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
-                  filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
-                }}>
-                  <div className="bg-white rounded-lg overflow-hidden">
-                    <Image
-                      src="/student_ai_chat_interface.png"
-                      alt="AI chat interface"
-                      width={600}
-                      height={400}
-                      className="w-full h-auto"
-                      quality={85}
-                      loading="lazy"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
+              <div className="relative w-full flex items-center justify-center order-2 lg:order-1">
+                <div className="relative w-full" style={{ maxWidth: '510px' }}>
+                  {/* Softer laptop mockup */}
+                  <div className="relative">
+                    <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1" style={{ aspectRatio: '510/350' }}>
+                      <div className="bg-white rounded-lg overflow-y-auto h-full">
+                        <Image
+                          src="/student_ai_chat_interface.png"
+                          alt="AI chat interface"
+                          width={600}
+                          height={400}
+                          className="w-full"
+                          quality={85}
+                          loading="lazy"
+                          sizes="(max-width: 640px) 100vw, 510px"
+                        />
+                      </div>
+                    </div>
+                    <div className="relative h-3 bg-gray-800 rounded-b-xl shadow-lg">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
+                    </div>
                   </div>
-                </div>
-                <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
               <div className="space-y-6 relative z-10 order-1 lg:order-2">
@@ -344,25 +356,28 @@ export default function StudentsPage() {
                   Monitor understanding, get insights, and improve learning strategies over time.
                 </p>
               </div>
-              <div className="relative">
-                <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
-                  filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
-                }}>
-                  <div className="bg-white rounded-lg overflow-hidden">
-                    <Image
-                      src="/feedback_student_received_from_ai.png"
-                      alt="Student feedback and progress"
-                      width={600}
-                      height={400}
-                      className="w-full h-auto"
-                      quality={85}
-                      loading="lazy"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
+              <div className="relative w-full flex items-center justify-center">
+                <div className="relative w-full" style={{ maxWidth: '510px' }}>
+                  {/* Softer laptop mockup */}
+                  <div className="relative">
+                    <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1" style={{ aspectRatio: '510/350' }}>
+                      <div className="bg-white rounded-lg overflow-y-auto h-full">
+                        <Image
+                          src="/feedback_student_received_from_ai.png"
+                          alt="Student feedback and progress"
+                          width={600}
+                          height={400}
+                          className="w-full"
+                          quality={85}
+                          loading="lazy"
+                          sizes="(max-width: 640px) 100vw, 510px"
+                        />
+                      </div>
+                    </div>
+                    <div className="relative h-3 bg-gray-800 rounded-b-xl shadow-lg">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
+                    </div>
                   </div>
-                </div>
-                <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
             </div>

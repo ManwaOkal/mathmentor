@@ -192,25 +192,28 @@ export default function TeachersPage() {
                   Set up your classroom and get a unique join code to share with students. Manage multiple classes effortlessly.
                 </p>
               </div>
-              <div className="relative">
-                <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
-                  filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
-                }}>
-                  <div className="bg-white rounded-lg overflow-hidden">
-                    <Image
-                      src="/teacher_classrooms_view.png"
-                      alt="Teacher classrooms view"
-                      width={800}
-                      height={500}
-                      className="w-full h-auto"
-                      quality={85}
-                      loading="lazy"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
+              <div className="relative w-full flex items-center justify-center">
+                <div className="relative w-full" style={{ maxWidth: '510px' }}>
+                  {/* Softer laptop mockup */}
+                  <div className="relative">
+                    <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1" style={{ aspectRatio: '510/350' }}>
+                      <div className="bg-white rounded-lg overflow-y-auto h-full">
+                        <Image
+                          src="/teacher_classrooms_view.png"
+                          alt="Teacher classrooms view"
+                          width={800}
+                          height={500}
+                          className="w-full"
+                          quality={85}
+                          loading="lazy"
+                          sizes="(max-width: 640px) 100vw, 510px"
+                        />
+                      </div>
+                    </div>
+                    <div className="relative h-3 bg-gray-800 rounded-b-xl shadow-lg">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
+                    </div>
                   </div>
-                </div>
-                <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
             </div>
@@ -230,25 +233,28 @@ export default function TeachersPage() {
                   Choose whether to use your own curriculum materials or general AI knowledge sources. Create engaging learning activities tailored to your teaching style.
                 </p>
               </div>
-              <div className="relative lg:order-1">
-                <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
-                  filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
-                }}>
-                  <div className="bg-white rounded-lg overflow-hidden">
-                    <Image
-                      src="/teacher_activity_creation_form.png"
-                      alt="Teacher activity creation form"
-                      width={800}
-                      height={500}
-                      className="w-full h-auto"
-                      quality={85}
-                      loading="lazy"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
+              <div className="relative w-full flex items-center justify-center lg:order-1">
+                <div className="relative w-full" style={{ maxWidth: '510px' }}>
+                  {/* Softer laptop mockup */}
+                  <div className="relative">
+                    <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1" style={{ aspectRatio: '510/350' }}>
+                      <div className="bg-white rounded-lg overflow-y-auto h-full">
+                        <Image
+                          src="/teacher_activity_creation_form.png"
+                          alt="Teacher activity creation form"
+                          width={800}
+                          height={500}
+                          className="w-full"
+                          quality={85}
+                          loading="lazy"
+                          sizes="(max-width: 640px) 100vw, 510px"
+                        />
+                      </div>
+                    </div>
+                    <div className="relative h-3 bg-gray-800 rounded-b-xl shadow-lg">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
+                    </div>
                   </div>
-                </div>
-                <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
             </div>
@@ -268,25 +274,28 @@ export default function TeachersPage() {
                   View, edit, and organize all your learning activities in one place. Sync activities to students, update content, and manage your classroom curriculum efficiently.
                 </p>
               </div>
-              <div className="relative lg:order-2">
-                <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
-                  filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
-                }}>
-                  <div className="bg-white rounded-lg overflow-hidden">
-                    <Image
-                      src="/teacher_activity_view.png"
-                      alt="Teacher activity management view"
-                      width={800}
-                      height={500}
-                      className="w-full h-auto"
-                      quality={85}
-                      loading="lazy"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
+              <div className="relative w-full flex items-center justify-center lg:order-2">
+                <div className="relative w-full" style={{ maxWidth: '510px' }}>
+                  {/* Softer laptop mockup */}
+                  <div className="relative">
+                    <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1" style={{ aspectRatio: '510/350' }}>
+                      <div className="bg-white rounded-lg overflow-y-auto h-full">
+                        <Image
+                          src="/teacher_activity_view.png"
+                          alt="Teacher activity management view"
+                          width={800}
+                          height={500}
+                          className="w-full"
+                          quality={85}
+                          loading="lazy"
+                          sizes="(max-width: 640px) 100vw, 510px"
+                        />
+                      </div>
+                    </div>
+                    <div className="relative h-3 bg-gray-800 rounded-b-xl shadow-lg">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
+                    </div>
                   </div>
-                </div>
-                <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
             </div>
@@ -306,25 +315,28 @@ export default function TeachersPage() {
                   Customize how the AI responds by providing teaching examples. The AI learns from your style and adapts automatically.
                 </p>
               </div>
-              <div className="relative order-2 lg:order-1">
-                <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
-                  filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
-                }}>
-                  <div className="bg-white rounded-lg overflow-hidden">
-                    <Image
-                      src="/teacher_finetuning_page.png"
-                      alt="Fine-tuning interface"
-                      width={800}
-                      height={500}
-                      className="w-full h-auto"
-                      quality={85}
-                      loading="lazy"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
+              <div className="relative w-full flex items-center justify-center order-2 lg:order-1">
+                <div className="relative w-full" style={{ maxWidth: '510px' }}>
+                  {/* Softer laptop mockup */}
+                  <div className="relative">
+                    <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1" style={{ aspectRatio: '510/350' }}>
+                      <div className="bg-white rounded-lg overflow-y-auto h-full">
+                        <Image
+                          src="/teacher_finetuning_page.png"
+                          alt="Fine-tuning interface"
+                          width={800}
+                          height={500}
+                          className="w-full"
+                          quality={85}
+                          loading="lazy"
+                          sizes="(max-width: 640px) 100vw, 510px"
+                        />
+                      </div>
+                    </div>
+                    <div className="relative h-3 bg-gray-800 rounded-b-xl shadow-lg">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
+                    </div>
                   </div>
-                </div>
-                <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
             </div>
@@ -344,25 +356,28 @@ export default function TeachersPage() {
                   See how each student performs across all activities. Identify strengths, weaknesses, and learning patterns to provide targeted support.
                 </p>
               </div>
-              <div className="relative lg:order-2">
-                <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
-                  filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
-                }}>
-                  <div className="bg-white rounded-lg overflow-hidden">
-                    <Image
-                      src="/teacher_seeing_an_individual_student's_performance_across_acrivities.png"
-                      alt="Individual student performance tracking"
-                      width={800}
-                      height={500}
-                      className="w-full h-auto"
-                      quality={85}
-                      loading="lazy"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
+              <div className="relative w-full flex items-center justify-center lg:order-2">
+                <div className="relative w-full" style={{ maxWidth: '510px' }}>
+                  {/* Softer laptop mockup */}
+                  <div className="relative">
+                    <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1" style={{ aspectRatio: '510/350' }}>
+                      <div className="bg-white rounded-lg overflow-y-auto h-full">
+                        <Image
+                          src="/teacher_seeing_an_individual_student's_performance_across_acrivities.png"
+                          alt="Individual student performance tracking"
+                          width={800}
+                          height={500}
+                          className="w-full"
+                          quality={85}
+                          loading="lazy"
+                          sizes="(max-width: 640px) 100vw, 510px"
+                        />
+                      </div>
+                    </div>
+                    <div className="relative h-3 bg-gray-800 rounded-b-xl shadow-lg">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
+                    </div>
                   </div>
-                </div>
-                <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
             </div>
@@ -382,25 +397,28 @@ export default function TeachersPage() {
                   Monitor student engagement, view detailed analytics, and identify learning gaps with comprehensive reports.
                 </p>
               </div>
-              <div className="relative order-2 lg:order-1">
-                <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900 p-1" style={{
-                  filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.25)) drop-shadow(0 6px 15px rgba(0,0,0,0.2))'
-                }}>
-                  <div className="bg-white rounded-lg overflow-hidden">
-                    <Image
-                      src="/teacher_analytics_page_with_student_scores_visible.png"
-                      alt="Teacher analytics"
-                      width={800}
-                      height={500}
-                      className="w-full h-auto"
-                      quality={85}
-                      loading="lazy"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                    />
+              <div className="relative w-full flex items-center justify-center order-2 lg:order-1">
+                <div className="relative w-full" style={{ maxWidth: '510px' }}>
+                  {/* Softer laptop mockup */}
+                  <div className="relative">
+                    <div className="relative rounded-xl overflow-hidden shadow-lg bg-gray-900 p-1" style={{ aspectRatio: '510/350' }}>
+                      <div className="bg-white rounded-lg overflow-y-auto h-full">
+                        <Image
+                          src="/teacher_analytics_page_with_student_scores_visible.png"
+                          alt="Teacher analytics"
+                          width={800}
+                          height={500}
+                          className="w-full"
+                          quality={85}
+                          loading="lazy"
+                          sizes="(max-width: 640px) 100vw, 510px"
+                        />
+                      </div>
+                    </div>
+                    <div className="relative h-3 bg-gray-800 rounded-b-xl shadow-lg">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
+                    </div>
                   </div>
-                </div>
-                <div className="relative h-2 bg-gray-800 rounded-b-xl shadow-xl">
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-0.5 bg-gray-700 rounded-b"></div>
                 </div>
               </div>
             </div>
