@@ -36,10 +36,9 @@ export default function ActivityAssignment({
   const loadStudents = async () => {
     try {
       setLoading(true)
-      console.log('Loading students for classroom:', classroomId)
+
       const result = await api.getClassroomStudents(classroomId)
-      console.log('Students API result:', result)
-      
+
       if (result && result.students) {
         // Extract student info from enrollment data
         const studentList = result.students.map((enrollment: any) => ({
@@ -48,14 +47,14 @@ export default function ActivityAssignment({
           name: enrollment.users?.name || enrollment.name,
           enrolled_at: enrollment.enrolled_at
         }))
-        console.log('Processed student list:', studentList)
+
         setStudents(studentList)
       } else {
-        console.warn('No students found in result:', result)
+
         setStudents([])
       }
     } catch (error) {
-      console.error('Error loading students:', error)
+      // Error occurred
       alert(`Error loading students: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setStudents([])
     } finally {
@@ -96,7 +95,7 @@ export default function ActivityAssignment({
       alert(`Activity assigned to ${result.assigned_count} student(s)`)
       onClose()
     } catch (error: any) {
-      console.error('Error assigning activity:', error)
+      // Error occurred
       alert(error?.message || 'Failed to assign activity')
     } finally {
       setAssigning(false)

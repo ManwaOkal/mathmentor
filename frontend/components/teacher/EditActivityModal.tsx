@@ -78,12 +78,8 @@ export default function EditActivityModal({
       }
       // If description is empty, don't include it (undefined is fine)
 
-      console.log('Updating activity with payload:', updatePayload)
-      
       const result = await api.updateActivity(activity.activity_id, updatePayload, sessionToken)
 
-      console.log('Activity update result:', result)
-      
       // Small delay to ensure backend has processed the update
       await new Promise(resolve => setTimeout(resolve, 200))
       
@@ -93,7 +89,7 @@ export default function EditActivityModal({
       }
       onClose()
     } catch (error: any) {
-      console.error('Error updating activity:', error)
+      // Error occurred
       let errorMessage = 'Failed to update activity'
       if (error instanceof Error) {
         errorMessage = error.message

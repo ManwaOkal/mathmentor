@@ -127,7 +127,7 @@ export default function Auth() {
       // Redirect to homepage with a parameter to prevent auto-login
       window.location.href = '/?logged_out=true'
     } catch (err) {
-      console.error('Logout error:', err)
+      // Error occurred
       setError(err instanceof Error ? err.message : 'Failed to sign out')
       // Even if there's an error, try to redirect and clear storage
       if (typeof window !== 'undefined') {

@@ -42,7 +42,7 @@ function TeacherPageContent() {
 
   const handleSyncActivities = async () => {
     if (!activeClassroom || !session?.access_token) {
-      console.error('Cannot sync: missing classroom or session')
+      // Error occurred
       return
     }
     
@@ -50,10 +50,9 @@ function TeacherPageContent() {
     setSyncMessage(null)
     
     try {
-      console.log('Syncing activities for classroom:', activeClassroom.classroom_id)
+
       const result = await api.syncClassroomActivities(activeClassroom.classroom_id, session.access_token)
-      console.log('Sync result:', result)
-      
+
       setSyncMessage({
         type: 'success',
         text: `Successfully synced ${result.synced_count || 0} activities to ${result.students_processed || 0} student(s)`
@@ -65,7 +64,7 @@ function TeacherPageContent() {
       // Clear message after 5 seconds
       setTimeout(() => setSyncMessage(null), 5000)
     } catch (error: any) {
-      console.error('Sync error:', error)
+      // Error occurred
       setSyncMessage({
         type: 'error',
         text: error?.message || 'Failed to sync activities. Please try again.'

@@ -206,7 +206,7 @@ export default function StudentActivity({ activityId, view = 'default', onActivi
             // Skip introduction phase and go straight to teach
             setCurrentPhase('teach')
           } catch (error) {
-            console.error('Error getting introduction:', error)
+            // Error getting introduction
             const introMessage: Message = {
               role: 'assistant',
               content: generateWelcomeMessage(),
@@ -233,14 +233,14 @@ export default function StudentActivity({ activityId, view = 'default', onActivi
               }
             }
           } catch (error) {
-            console.error('Error starting activity:', error)
+            // Error starting activity
           }
         }
       } else {
         alert('Activity not found')
       }
     } catch (error) {
-      console.error('Error loading activity:', error)
+      // Error loading activity
       alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setLoading(false)
@@ -288,7 +288,7 @@ export default function StudentActivity({ activityId, view = 'default', onActivi
         const conversationHistory = getConversationHistory()
         if (conversationHistory.length > 0) {
           api.saveConversation(activity.student_activity_id, conversationHistory, sessionToken).catch((error) => {
-            console.error('Error auto-saving conversation:', error)
+            // Error occurred
           })
         }
       }
@@ -300,7 +300,7 @@ export default function StudentActivity({ activityId, view = 'default', onActivi
         const conversationHistory = getConversationHistory()
         if (conversationHistory.length > 0) {
           api.saveConversation(activity.student_activity_id, conversationHistory, sessionToken).catch((error) => {
-            console.error('Error saving conversation on visibility change:', error)
+            // Error occurred
           })
         }
       }
@@ -318,7 +318,7 @@ export default function StudentActivity({ activityId, view = 'default', onActivi
         const conversationHistory = getConversationHistory()
         if (conversationHistory.length > 0) {
           api.saveConversation(activity.student_activity_id, conversationHistory, sessionToken).catch((error) => {
-            console.error('Error saving conversation on unmount:', error)
+            // Error occurred
           })
         }
       }
@@ -380,10 +380,10 @@ export default function StudentActivity({ activityId, view = 'default', onActivi
         ]
         await api.saveConversation(activity!.student_activity_id, fullConversationHistory, sessionToken || undefined)
       } catch (error) {
-        console.error('Error saving conversation:', error)
+        // Error occurred
       }
     } catch (error) {
-      console.error('Error getting tutor response:', error)
+      // Error occurred
       // Set sending to false BEFORE adding error message
       setSending(false)
       
@@ -428,7 +428,7 @@ export default function StudentActivity({ activityId, view = 'default', onActivi
             setAssessmentFeedback(assessment.feedback || null)
           }
         } catch (error) {
-          console.error('Error assessing understanding:', error)
+          // Error occurred
           // Calculate score based on actual engagement - 0 if no math work
           finalScore = (isJustGreetings || !hasMathematicalWork) 
             ? 0 
@@ -446,7 +446,6 @@ export default function StudentActivity({ activityId, view = 'default', onActivi
       }
 
       // Always send score (backend will generate dynamic feedback if not provided)
-      console.log(`DEBUG: Sending score ${finalScore} and feedback ${finalFeedback ? 'present' : 'undefined'} to backend`)
 
       await api.completeConversationalActivity(
         activity.student_activity_id, 
@@ -466,7 +465,7 @@ export default function StudentActivity({ activityId, view = 'default', onActivi
           } as StudentActivityType)
         }
       } catch (error) {
-        console.error('Error reloading activity:', error)
+        // Error occurred
       }
       
       setCompleted(true)
@@ -487,7 +486,7 @@ export default function StudentActivity({ activityId, view = 'default', onActivi
         }
       }, 500)
     } catch (error) {
-      console.error('Error completing activity:', error)
+      // Error occurred
       alert('Error completing activity. Please try again.')
     } finally {
       setIsCompleting(false)

@@ -260,7 +260,7 @@ export default function AnalyticsDashboard({
         setStudentPerformance(data.student_performance || [])
       }
     } catch (error) {
-      console.error('Error fetching analytics:', error)
+      // Error occurred
       // On error, try to use cached data if available
       const cached = analyticsCache.get(classroomId)
       if (cached) {
@@ -316,7 +316,7 @@ export default function AnalyticsDashboard({
       })
       setStudentDetail(data)
     } catch (error) {
-      console.error('Error fetching student detail:', error)
+      // Error occurred
       // On error, try to use cached data if available
       const cached = studentDetailCache.get(cacheKey)
       if (cached) {

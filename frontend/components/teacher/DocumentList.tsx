@@ -41,7 +41,7 @@ export default function DocumentList({ classroomId, onSelectDocument }: Document
         // Silently handle errors - don't stop polling
         const isTimeout = err?.message?.includes('timeout') || err?.message?.includes('Request timeout')
         if (!isTimeout) {
-          console.error('Polling error (will retry):', err)
+          // Error occurred:', err)
         }
         // Continue polling even on timeout - status will update on next successful poll
       })
@@ -66,9 +66,9 @@ export default function DocumentList({ classroomId, onSelectDocument }: Document
       
       if (isTimeout) {
         // On timeout, just log and continue polling - don't show error
-        console.log('Document list request timed out, will retry on next poll...')
+
       } else {
-        console.error('Error loading documents:', error)
+        // Error occurred
       }
       
       // Set loading to false after first attempt (even if it fails)
@@ -84,14 +84,14 @@ export default function DocumentList({ classroomId, onSelectDocument }: Document
     
     setProcessingIntelligently(documentId)
     try {
-      console.log('Processing document intelligently:', documentId)
+
       const result = await api.processDocumentIntelligently(documentId)
-      console.log('Intelligent processing result:', result)
+
       alert(`Document analyzed! Found ${result.analysis?.total_segments || 0} educational segments covering ${result.analysis?.topics_covered?.length || 0} topics.`)
       // Refresh documents to show updated status
       await loadDocuments()
     } catch (error: any) {
-      console.error('Error processing document intelligently:', error)
+      // Error occurred
       const errorMessage = error?.message || error?.detail || 'Failed to process document intelligently'
       alert(`Error: ${errorMessage}`)
     } finally {
@@ -104,14 +104,14 @@ export default function DocumentList({ classroomId, onSelectDocument }: Document
     
     setGenerating(documentId)
     try {
-      console.log('Generating activities for document:', documentId, 'Smart processing:', useSmartProcessing)
+
       const result = await api.generateActivities(documentId, 10, useSmartProcessing)
-      console.log('Generate activities result:', result)
+
       alert(`Generated ${result.activities_generated || 0} activities from document`)
       // Refresh documents to show updated status
       await loadDocuments()
     } catch (error: any) {
-      console.error('Error generating activities:', error)
+      // Error occurred
       const errorMessage = error?.message || error?.detail || 'Failed to generate activities'
       alert(`Error: ${errorMessage}`)
     } finally {

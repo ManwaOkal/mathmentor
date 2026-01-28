@@ -50,7 +50,7 @@ export default function JoinClassroom({ onJoinSuccess, onClose }: JoinClassroomP
         setSuccess(null)
       }, 3000)
     } catch (error: any) {
-      console.error('Error joining classroom:', error)
+      // Error occurred
       const errorMessage = error?.message || error?.detail || 'Failed to join classroom. Please check the join code and try again.'
       setError(errorMessage)
     } finally {
@@ -63,7 +63,7 @@ export default function JoinClassroom({ onJoinSuccess, onClose }: JoinClassroomP
       const text = await navigator.clipboard.readText()
       setJoinCode(text.trim().toUpperCase())
     } catch (err) {
-      console.error('Failed to read clipboard:', err)
+      // Error occurred
     }
   }
 

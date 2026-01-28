@@ -116,15 +116,10 @@ class ApiClient {
     const headers = headersObj
 
     // Add auth header with Supabase session token
-    console.log('Getting auth token for request to:', endpoint)
     const token = await this.getAuthToken()
-    console.log('Auth token result:', token ? `Token exists (length: ${token.length})` : 'No token')
     
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
-      console.log('Adding auth header with token')
-    } else {
-      console.warn('No authentication token available - request may fail')
     }
 
     // Create request promise with timeout
@@ -137,7 +132,6 @@ class ApiClient {
         const timeout = isDocumentListPoll ? 60000 : (isAIGeneration ? LONG_REQUEST_TIMEOUT : REQUEST_TIMEOUT)
         const timeoutId = setTimeout(() => controller.abort(), timeout)
 
-        console.log('Making request to:', url, 'with headers:', Object.keys(headers))
         const response = await fetch(url, {
           ...options,
           headers,
@@ -146,16 +140,13 @@ class ApiClient {
         })
 
         clearTimeout(timeoutId)
-        console.log('Response received:', response.status, response.statusText)
 
         if (!response.ok) {
           const error = await response.json().catch(() => ({ detail: response.statusText }))
-          console.error('Request failed:', response.status, error)
           throw new Error(error.detail || `HTTP error! status: ${response.status}`)
         }
 
         const data = await response.json()
-        console.log('Request successful, data received')
         
         // Cache successful GET requests
         if (useCache && (options.method === 'GET' || !options.method)) {
@@ -185,7 +176,7 @@ class ApiClient {
     // Keeping as fallback for backward compatibility, but it will timeout
     if (typeof window !== 'undefined') {
       try {
-        console.warn('getAuthToken: Called without token parameter - this may hang. Use session from useAuth context instead.')
+        // getAuthToken: Called without token parameter - this may hang. Use session from useAuth context instead.
         const { supabase } = await import('./supabase')
         
         // Use getSession() with a timeout to prevent hanging
@@ -198,7 +189,7 @@ class ApiClient {
         try {
           sessionResult = await Promise.race([sessionPromise, timeoutPromise])
         } catch (timeoutError) {
-          console.error('getAuthToken: Session check timed out - use session from useAuth context instead')
+          // Error occurred
           return null
         }
         
@@ -215,7 +206,7 @@ class ApiClient {
         
         return token
       } catch (error) {
-        console.error('Error getting auth token:', error)
+        // Error getting auth token
         return null
       }
     }
@@ -225,7 +216,7 @@ class ApiClient {
   private getUserId(): string | null {
     // Deprecated: Do not use localStorage. Use session from useAuth context instead.
     // Keeping for backward compatibility only - will be removed
-    console.warn('getUserId() is deprecated - use session from useAuth context instead')
+    // getUserId() is deprecated - use session from useAuth context instead
     return null
   }
 
@@ -386,9 +377,6 @@ class ApiClient {
 
   async getTeacherClassrooms(sessionToken?: string): Promise<any[]> {
     try {
-      console.log('getTeacherClassrooms: Starting...')
-      console.log('Fetching classrooms from:', `${this.baseUrl}/api/teacher/classrooms`)
-      
       // Use provided token or fallback to getAuthToken
       const token = sessionToken || await this.getAuthToken()
       if (!token) {
@@ -405,27 +393,19 @@ class ApiClient {
         }
       })
       
-      console.log('getTeacherClassrooms: Response status:', response.status)
-      
       if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: response.statusText }))
         throw new Error(error.detail || `HTTP error! status: ${response.status}`)
       }
       
       const result = await response.json()
-      console.log('getTeacherClassrooms: Raw result:', result)
       
       // Ensure we always return an array
       const classrooms = Array.isArray(result) ? result : []
-      console.log('Fetched classrooms:', classrooms.length, classrooms)
-      
-      if (classrooms.length === 0) {
-        console.log('No classrooms found - this might be normal if user has no classrooms yet')
-      }
       
       return classrooms
     } catch (error) {
-      console.error('Failed to fetch classrooms:', error)
+      // Failed to fetch classrooms
       // Re-throw error with more context
       if (error instanceof Error) {
         const errorMsg = error.message.includes('Failed to fetch classrooms') 
@@ -616,7 +596,7 @@ class ApiClient {
         method: 'POST',
       }, false)
     } catch (error) {
-      console.error('Failed to cancel generation:', error)
+      // Error occurred
     }
   }
 
@@ -749,7 +729,6 @@ class ApiClient {
     
     // Ensure force is properly converted to string 'true' or 'false' for query parameter
     const forceParam = force ? 'true' : 'false'
-    console.log('deleteActivity called with force=', force, 'forceParam=', forceParam)
     
     return this.request(`/api/teacher/activities/${activityId}?force=${forceParam}`, {
       method: 'DELETE',
@@ -886,24 +865,20 @@ class ApiClient {
     }
 
     const data = await response.json()
-    console.log(`[API] getDocument raw response for ${documentId}:`, JSON.stringify(data, null, 2))
     
     // Handle case where response might be wrapped incorrectly
     if (data && typeof data === 'object') {
       // If response has a 'documents' array, that's wrong - should be direct document object
       // This might happen if the wrong endpoint is hit
       if (data.documents && Array.isArray(data.documents)) {
-        console.error(`[API] ERROR: Got documents array instead of document object! Response:`, data)
         // Try to find the document in the array
         const doc = data.documents.find((d: any) => d.document_id === documentId)
         if (doc) {
-          console.log(`[API] Found document in array:`, doc)
           return doc
         }
         throw new Error(`Document ${documentId} not found in response`)
       }
       // Return the data directly (should be the document object)
-      console.log(`[API] Returning document data:`, data)
       return data
     }
     
@@ -1200,7 +1175,6 @@ class ApiClient {
     if (!id) {
       throw new Error('Example ID is required for deletion')
     }
-    console.log('API: Deleting teaching example with ID:', id)
     
     const token = sessionToken || await this.getAuthToken()
     if (!token) {

@@ -25,7 +25,7 @@ export default function DocumentUpload({
   useEffect(() => {
     // Verify the ref is set after mount
     if (fileInputRef.current) {
-      console.log('File input ref is set:', fileInputRef.current)
+
     }
   }, [])
 
@@ -110,7 +110,7 @@ export default function DocumentUpload({
       }, 2000)
 
     } catch (error: any) {
-      console.error('Upload error:', error)
+      // Error occurred
       setUploadStatus('error')
       const errorMessage = error?.message || 'Upload failed. Please try again.'
       alert(errorMessage)

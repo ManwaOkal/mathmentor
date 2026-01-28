@@ -58,7 +58,6 @@ function StudentPageContent() {
       
       // Check if user is logged in
       if (!user || !session) {
-        console.warn('Cannot load classrooms: user or session not available')
         setClassrooms([])
         setLoading(false)
         isLoadingRef.current = false
@@ -67,19 +66,16 @@ function StudentPageContent() {
       
       // Get session token from auth context
       const sessionToken = session.access_token
-      console.log('Loading classrooms for user:', user.id)
-      console.log('Using session token:', sessionToken ? `Yes (length: ${sessionToken.length})` : 'No')
       
       // Call API with session token
       const data = await api.getStudentClassrooms(sessionToken)
       
       // Ensure we have an array and update state
       const classroomsList = Array.isArray(data) ? data : []
-      console.log('Loaded classrooms:', classroomsList.length, classroomsList)
       
       setClassrooms(classroomsList)
     } catch (error) {
-      console.error('Error loading classrooms:', error)
+      // Error loading classrooms
       setClassrooms([])
     } finally {
       setLoading(false)
@@ -93,7 +89,6 @@ function StudentPageContent() {
   // Memoize loadActivities to prevent infinite loops with caching
   const loadActivities = useCallback(async (classroomId: string, shouldSync: boolean = false, forceRefresh: boolean = false) => {
     if (!session) {
-      console.warn('Cannot load activities: session not available')
       return
     }
 
@@ -133,7 +128,7 @@ function StudentPageContent() {
       }
       
     } catch (error) {
-      console.error('Error loading activities:', error)
+      // Error loading activities
       // On error, try to use cached data if available
       const cached = activitiesCache.current.get(classroomId)
       if (cached) {
@@ -467,9 +462,9 @@ function StudentPageContent() {
                             </div>
                           </button>
                         ) : (
-                          <button
+                          <div
                             onClick={() => handleStartActivity(activity.activity_id)}
-                            className="w-full flex items-center justify-between pl-4 sm:pl-5 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-lg relative z-10 hover:bg-gradient-to-r hover:from-slate-50/80 hover:to-transparent transition-all duration-300 text-left"
+                            className="w-full flex items-center justify-between pl-4 sm:pl-5 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-lg relative z-10 hover:bg-gradient-to-r hover:from-slate-50/80 hover:to-transparent transition-all duration-300 cursor-pointer"
                           >
                             <div className="flex items-center space-x-2.5 sm:space-x-3 flex-1 min-w-0">
                               {/* Compact icon container */}
@@ -501,7 +496,7 @@ function StudentPageContent() {
                             >
                               Start
                             </button>
-                          </button>
+                          </div>
                         )}
 
                         {isExpanded && (

@@ -84,21 +84,17 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         setLoading(false)
         return
       }
-      
-      console.log('Loading classrooms for user:', user.id)
-      console.log('User email:', user.email)
-      
+
+
       // Get session token from auth context if available
       const sessionToken = session?.access_token || null
-      console.log('Using session token:', sessionToken ? `Yes (length: ${sessionToken.length})` : 'No')
       
       // API client already has timeout handling, no need for double timeout
       const data = await api.getTeacherClassrooms(sessionToken || undefined)
       
       // Ensure we have an array and update state
       const classroomsList = Array.isArray(data) ? data : []
-      console.log('Loaded classrooms:', classroomsList.length, classroomsList)
-      
+
       setClassrooms(classroomsList)
       setError(null)
       
@@ -115,12 +111,11 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
       
       // If no classrooms, show helpful message
       if (classroomsList.length === 0) {
-        console.log('No classrooms found - user may not have created any yet')
+
       }
     } catch (error) {
-      console.error('Error loading classrooms:', error)
-      console.error('Error details:', {
-        message: error instanceof Error ? error.message : String(error),
+      // Error occurred
+      // Error occurred,
         stack: error instanceof Error ? error.stack : undefined
       })
       
@@ -179,11 +174,10 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
 
   const handleClassroomCreate = async (name: string, description?: string) => {
     try {
-      console.log('Creating classroom:', name, description)
+
       const sessionToken = session?.access_token || null
       const newClassroom = await api.createClassroom(name, description, sessionToken || undefined)
-      console.log('Created classroom response:', newClassroom)
-      
+
       if (newClassroom && newClassroom.classroom_id) {
         // Ensure updated_at exists (fallback to created_at)
         const classroomWithUpdatedAt = {
@@ -196,14 +190,14 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
           // Check if already exists (avoid duplicates)
           const exists = prev.find(c => c.classroom_id === classroomWithUpdatedAt.classroom_id)
           if (exists) {
-            console.log('Classroom already in list, updating...')
+
             return prev.map(c => 
               c.classroom_id === classroomWithUpdatedAt.classroom_id 
                 ? classroomWithUpdatedAt 
                 : c
             )
           }
-          console.log('Adding new classroom to list')
+
           return [...prev, classroomWithUpdatedAt]
         })
         setActiveClassroom(classroomWithUpdatedAt)
@@ -213,14 +207,14 @@ export default function TeacherLayout({ children }: TeacherLayoutProps) {
         
         // Reload classrooms to get fresh data from server (ensures consistency)
         setTimeout(async () => {
-          console.log('Reloading classrooms after creation...')
+
           await loadClassrooms()
         }, 500) // Small delay to ensure backend has processed
       } else {
         throw new Error('No classroom data returned from server')
       }
     } catch (error: any) {
-      console.error('Error creating classroom:', error)
+      // Error occurred
       const errorMessage = error?.message || error?.detail || 'Failed to create classroom. Please try again.'
       alert(`Error: ${errorMessage}\n\nMake sure:\n1. You are logged in as a teacher\n2. Backend API is running\n3. Database migration is applied`)
       

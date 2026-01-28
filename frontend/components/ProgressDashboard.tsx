@@ -37,7 +37,7 @@ export default function ProgressDashboard() {
       setProgress(progressData)
       setRecommendations(recs.recommendations)
     } catch (error) {
-      console.error('Failed to load progress:', error)
+      // Error occurred
     } finally {
       setLoading(false)
     }

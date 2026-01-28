@@ -79,13 +79,13 @@ export async function updateUserRole(
     });
     
     if (error) {
-      console.error('Error updating user role:', error);
+      // Error occurred
       return false;
     }
     
     return true;
   } catch (error) {
-    console.error('Error updating user role:', error);
+    // Error occurred
     return false;
   }
 }
@@ -120,7 +120,7 @@ export async function hasClassroomAccess(
     
     return !!enrollment;
   } catch (error) {
-    console.error('Error checking classroom access:', error);
+    // Error occurred
     return false;
   }
 }

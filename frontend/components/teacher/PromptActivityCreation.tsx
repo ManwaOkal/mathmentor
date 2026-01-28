@@ -73,13 +73,13 @@ export default function PromptActivityCreation({
     const poll = async () => {
       try {
         const doc = await api.getDocument(documentId, sessionToken)
-        console.log(`[Poll] Document ${documentId} status:`, doc.status, 'Full doc:', doc)
+
         const status = doc.status || 'parsing'
         
         let mappedStatus: UploadedDocument['status'] = 'parsing'
         if (status === 'ready') {
           mappedStatus = 'ready'
-          console.log(`[Poll] Document ${documentId} is READY!`)
+
         } else if (status === 'failed') {
           mappedStatus = 'error'
         } else if (status === 'processing') {
@@ -104,11 +104,10 @@ export default function PromptActivityCreation({
               ? { ...d, document_id: documentId, status: mappedStatus, error_message: doc.metadata?.error }
               : d
           )
-          console.log(`[Poll] Updated documents, status for ${documentId}:`, mappedStatus, 'Updated docs:', updated)
-          
+
           // If status is ready or failed, stop polling AFTER state update
           if (mappedStatus === 'ready' || mappedStatus === 'error') {
-            console.log(`[Poll] Document ${documentId} is ${mappedStatus}, stopping polling`)
+
             const existingTimeout = pollingTimeoutsRef.current.get(timeoutKey)
             if (existingTimeout) {
               clearTimeout(existingTimeout)
@@ -133,7 +132,7 @@ export default function PromptActivityCreation({
           pollingTimeoutsRef.current.delete(timeoutKey)
         }
       } catch (error) {
-        console.error('Error polling document status:', error)
+        // Error occurred
         // Continue polling on error, but clean up if max attempts reached
         attempts++
         if (attempts < maxAttempts) {
@@ -184,7 +183,7 @@ export default function PromptActivityCreation({
       // Poll for status updates
       pollDocumentStatus(result.document_id, tempId, sessionToken)
     } catch (error: any) {
-      console.error('Upload error:', error)
+      // Error occurred
       setUploadedDocuments(prev => prev.map(doc => 
         doc.document_id === tempId 
           ? { ...doc, status: 'error', error_message: error?.message || 'Upload failed' }
@@ -343,7 +342,7 @@ export default function PromptActivityCreation({
 
       resetForm()
     } catch (error: any) {
-      console.error('Error creating conversational activity:', error)
+      // Error occurred
       setProcessingStatus({
         status: 'failed',
         message: error?.message || 'Failed to create activity'
@@ -392,8 +391,7 @@ export default function PromptActivityCreation({
   
   // Debug: Log document statuses
   useEffect(() => {
-    console.log('[Debug] Uploaded documents:', uploadedDocuments.map(d => ({ id: d.document_id, status: d.status, filename: d.filename })))
-    console.log('[Debug] Ready docs count:', readyDocsCount, 'Has docs:', hasDocs, 'Knowledge mode:', knowledgeSourceMode)
+    // Document status tracking
   }, [uploadedDocuments, readyDocsCount, hasDocs, knowledgeSourceMode])
 
   const canProceedToNextStep = () => {

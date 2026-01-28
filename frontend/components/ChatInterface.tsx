@@ -214,7 +214,7 @@ export default function ChatInterface({ onConversationUpdate }: ChatInterfacePro
           onConversationUpdate(conversation.title)
         }
       } catch (error) {
-        console.error('Error saving conversation:', error)
+        // Error occurred
       }
     }
 

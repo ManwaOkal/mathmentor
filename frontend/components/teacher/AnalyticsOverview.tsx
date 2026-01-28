@@ -35,7 +35,7 @@ export function AnalyticsOverview({ classroomId }: AnalyticsOverviewProps) {
         })
       }
     } catch (error) {
-      console.error('Error loading analytics:', error)
+      // Error occurred
       // Keep previous stats on error, don't reset to zero
     } finally {
       setLoading(false)

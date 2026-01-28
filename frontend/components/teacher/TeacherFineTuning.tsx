@@ -77,7 +77,7 @@ export default function TeacherFineTuning() {
             }
           }
         } catch (e) {
-          console.error('Error reading cache:', e)
+          // Error occurred
           // Continue to fetch fresh data
         }
       }
@@ -100,10 +100,10 @@ export default function TeacherFineTuning() {
           timestamp: Date.now()
         }))
       } catch (e) {
-        console.error('Error saving cache:', e)
+        // Error occurred
       }
     } catch (error) {
-      console.error('Error loading examples:', error)
+      // Error occurred
     } finally {
       setLoading(false)
     }
@@ -114,7 +114,7 @@ export default function TeacherFineTuning() {
     try {
       localStorage.removeItem(CACHE_KEY)
     } catch (e) {
-      console.error('Error clearing cache:', e)
+      // Error occurred
     }
   }
 
@@ -142,8 +142,6 @@ export default function TeacherFineTuning() {
         assessment_criteria: [newExample.assessment_criteria.trim()] // Single item array
       }
 
-      console.log('Saving example with data:', exampleData)
-
       if (editingExample) {
         await api.updateTeachingExample(editingExample, exampleData, sessionToken)
       } else {
@@ -160,7 +158,7 @@ export default function TeacherFineTuning() {
       setToastMessage(editingExample ? 'Example updated successfully!' : 'Example added successfully!')
       setShowToast(true)
     } catch (error: any) {
-      console.error('Error saving example:', error)
+      // Error occurred
       const errorMessage = error?.message || error?.detail || 'Failed to save example'
       setToastMessage(`Failed to save example: ${errorMessage}`)
       setShowToast(true)
@@ -212,7 +210,7 @@ export default function TeacherFineTuning() {
         await loadExamples(true)
       }, 100)
     } catch (error: any) {
-      console.error('Error deleting example:', error)
+      // Error occurred
       const errorMessage = error?.message || error?.detail || 'Failed to delete example'
       setToastMessage(`Failed to delete example: ${errorMessage}`)
       setShowToast(true)

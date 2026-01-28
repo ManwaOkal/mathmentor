@@ -114,7 +114,7 @@ export default function ActivityCreation({
       // Poll for status updates
       pollDocumentStatus(result.document_id, tempId)
     } catch (error: any) {
-      console.error('Upload error:', error)
+      // Error occurred
       setUploadedDocuments(prev => prev.map(doc => 
         doc.document_id === tempId 
           ? { ...doc, status: 'error', error_message: error?.message || 'Upload failed' }
@@ -154,7 +154,7 @@ export default function ActivityCreation({
           setTimeout(poll, 5000) // Poll every 5 seconds
         }
       } catch (error) {
-        console.error('Error polling document status:', error)
+        // Error occurred
       }
     }
 
@@ -261,7 +261,7 @@ export default function ActivityCreation({
 
       resetForm()
     } catch (error: any) {
-      console.error('Error creating conversational activity:', error)
+      // Error occurred
       setProcessingStatus({
         status: 'failed',
         message: error?.message || 'Failed to create activity'

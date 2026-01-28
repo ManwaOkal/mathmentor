@@ -35,13 +35,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single()
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = not found
-        console.error('Error loading user profile:', error)
+        // Error occurred
         return null
       }
 
       return data
     } catch (error) {
-      console.error('Error loading user profile:', error)
+      // Error occurred
       return null
     }
   }
@@ -58,14 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
 
       if (error) {
-        console.error('Error creating user profile:', error)
+        // Error occurred
         // If user already exists, that's okay
         if (error.code !== '23505') { // Unique violation
           throw error
         }
       }
     } catch (error) {
-      console.error('Error creating user profile:', error)
+      // Error occurred
       throw error
     }
   }
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error
     } catch (error) {
-      console.error('Error updating user metadata:', error)
+      // Error occurred
       throw error
     }
   }
@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
     if (!supabaseUrl || !supabaseKey) {
-      console.warn('Supabase not configured - skipping auth initialization')
+
       setLoading(false)
       return
     }
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set a timeout to ensure loading doesn't hang forever
     const timeoutId = setTimeout(() => {
       if (mounted) {
-        console.warn('Auth loading timeout - setting loading to false')
+
         setLoading(false)
       }
     }, 5000) // 5 second timeout
@@ -141,13 +141,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     session.user.user_metadata?.name
                   ).catch((error) => {
                     // Silently fail - profile already set from metadata
-                    console.debug('Profile creation failed (non-critical):', error)
                   })
                 }
               })
               .catch((error) => {
                 // Silently fail - profile already set from metadata
-                console.debug('Profile loading failed (non-critical):', error)
               })
           }, 100) // Small delay to not block UI
         } else {
@@ -159,7 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch((error) => {
         clearTimeout(timeoutId)
-        console.error('Error getting session:', error)
+        // Error occurred
         if (mounted) {
           setLoading(false)
           setUser(null)
@@ -194,14 +192,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Profile doesn't exist, try to create it (but don't block)
             // This is a fallback in case the database trigger didn't work
             const role = profileFromMetadata?.role || UserRole.STUDENT
-            console.log('Profile not found in database, attempting to create...')
             createUserProfile(
               session.user.id,
               session.user.email!,
               role,
               session.user.user_metadata?.name
             ).then(() => {
-              console.log('Profile created successfully on login')
               // Reload profile after creation
               if (mounted) {
                 loadUserProfile(session.user.id).then((newProfile) => {
@@ -214,18 +210,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             }).catch((error: any) => {
               // Handle errors gracefully
+              // Handle errors gracefully
               if (error?.code === '42501') {
-                console.warn('Profile creation blocked by RLS. Trigger should have created it.')
+                // Profile creation blocked by RLS. Trigger should have created it.
               } else if (error?.code === '23505') {
-                console.log('Profile already exists (race condition)')
-              } else {
-                console.error('Error creating profile (non-blocking):', error)
+                // Profile already exists (race condition)
               }
               // Profile already set from metadata, so this is fine
             })
           }
         } catch (error) {
-          console.error('Error loading profile (non-blocking):', error)
+          // Error occurred:', error)
           // Profile already set from metadata, so continue
         }
       } else {
@@ -266,19 +261,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       if (error) {
-        console.error('Signup error:', error)
+        // Error occurred
         return { error }
       }
 
       // Profile creation is handled automatically by database trigger (009_auto_create_user_profile.sql)
       // No need to create it manually here - this prevents RLS issues and hanging
       if (data.user) {
-        console.log('User created successfully. Profile will be created automatically by database trigger.')
+
       }
 
       return { error: null }
     } catch (error: any) {
-      console.error('Unexpected signup error:', error)
+      // Error occurred
       return { error: error as AuthError }
     }
   }
@@ -324,7 +319,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Sign out from Supabase (this will trigger onAuthStateChange)
       const { error } = await supabase.auth.signOut({ scope: 'global' })
       if (error) {
-        console.error('Error signing out:', error)
+        // Error occurred
         // Continue anyway to clear local storage
       }
       
@@ -342,7 +337,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             localStorage.removeItem(key)
           } catch (e) {
-            console.warn('Failed to remove localStorage key:', key, e)
+
           }
         })
         
@@ -350,14 +345,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           sessionStorage.clear()
         } catch (e) {
-          console.warn('Failed to clear sessionStorage:', e)
+
         }
       }
       
       // Wait a bit for the auth state change to propagate
       await new Promise(resolve => setTimeout(resolve, 100))
     } catch (error) {
-      console.error('Error signing out:', error)
+      // Error occurred
       // Even if there's an error, clear local state and storage
       setUser(null)
       setProfile(null)
@@ -373,7 +368,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           keysToRemove.forEach(key => localStorage.removeItem(key))
         } catch (e) {
-          console.warn('Failed to clear localStorage on error:', e)
+
         }
       }
       throw error
@@ -421,7 +416,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { error: null }
     } catch (error) {
-      console.error('Error updating profile:', error)
+      // Error occurred
       return { error: error as Error }
     }
   }

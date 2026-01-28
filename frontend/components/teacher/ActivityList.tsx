@@ -34,7 +34,7 @@ export default function ActivityList({ classroomId, onSelectActivity }: Activity
       setLoading(true)
       const sessionToken = session?.access_token || null
       if (!sessionToken) {
-        console.warn('No session token available for loading activities')
+
         return
       }
       const result = await api.getClassroomActivities(classroomId, sessionToken)
@@ -51,7 +51,7 @@ export default function ActivityList({ classroomId, onSelectActivity }: Activity
         }))
       }
     } catch (error) {
-      console.error('Error loading activities:', error)
+      // Error occurred
     } finally {
       setLoading(false)
       loadingRef.current = false
@@ -77,7 +77,7 @@ export default function ActivityList({ classroomId, onSelectActivity }: Activity
           return
         }
       } catch (e) {
-        console.error('Error parsing cached activities:', e)
+        // Error occurred
       }
     }
     
@@ -170,7 +170,7 @@ export default function ActivityList({ classroomId, onSelectActivity }: Activity
     setDeletingActivityId(activityId)
     
     try {
-      console.log('Deleting activity with force=', force)
+
       await api.deleteActivity(activityId, force, sessionToken)
       // Remove from local state immediately for instant UI feedback
       const updatedActivities = activities.filter(a => a.activity_id !== activityId)
@@ -192,12 +192,12 @@ export default function ActivityList({ classroomId, onSelectActivity }: Activity
       // Reload activities to ensure sync with backend and remove from students' view
       await loadActivities()
     } catch (error) {
-      console.error('Error deleting activity:', error)
+      // Error occurred
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       
       // If we still get the error about started/completed, try with force=true explicitly
       if (errorMessage.includes('started or completed') && !force) {
-        console.log('Retrying with force=true')
+
         try {
           await api.deleteActivity(activityId, true, sessionToken)
           setActivities(prev => prev.filter(a => a.activity_id !== activityId))
