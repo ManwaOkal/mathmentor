@@ -321,7 +321,7 @@ function HomeContent() {
               <span className="text-sm font-medium text-slate-700">Trusted Partners</span>
             </div>
             <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#1f1f1f] mb-6 leading-tight">
-              Trusted by 10+ Schools
+              Trusted by 10 Schools
             </h2>
             <p className="text-lg sm:text-xl text-[#737373] max-w-2xl mx-auto leading-relaxed">
               Join our growing community of partner high schools.
