@@ -2,7 +2,25 @@
  * API client for MathMentor backend with caching and performance optimizations
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const DEFAULT_LOCAL_API_URL = 'http://localhost:8000'
+const DEFAULT_PRODUCTION_API_URL = 'https://mathmentor-api.onrender.com'
+
+const resolveApiUrl = () => {
+  const configuredUrl = process.env.NEXT_PUBLIC_API_URL?.trim()
+  if (configuredUrl) return configuredUrl
+
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname.toLowerCase()
+    // Production fallback for academy domain when env var is missing in frontend deploy settings.
+    if (host === 'mathmentor.academy' || host === 'www.mathmentor.academy') {
+      return DEFAULT_PRODUCTION_API_URL
+    }
+  }
+
+  return DEFAULT_LOCAL_API_URL
+}
+
+const API_URL = resolveApiUrl()
 const REQUEST_TIMEOUT = 30000 // 30 seconds
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes for GET requests
 const LONG_REQUEST_TIMEOUT = 120000 // 2 minutes for AI generation requests

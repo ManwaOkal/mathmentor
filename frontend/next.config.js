@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL
+
 const nextConfig = {
   reactStrictMode: true,
   images: {
@@ -9,9 +11,7 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
-  },
+  env: configuredApiUrl ? { NEXT_PUBLIC_API_URL: configuredApiUrl } : {},
 }
 
 module.exports = nextConfig
